@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Race Telemetry — What's New</title>
+<style>
+  :root {
+    --bg-900:#0f172a; --bg-800:#1e293b; --bg-700:#334155;
+    --text:#e2e8f0; --text-dim:#94a3b8; --accent:#38bdf8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin:0; background:var(--bg-900); color:var(--text); padding:24px 20px 56px;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  .wrap { max-width:760px; margin:0 auto; }
+  .back { color:var(--accent); font-size:13px; text-decoration:none; }
+  .back:hover { text-decoration:underline; }
+  h1 { font-size:24px; margin:18px 0 4px; }
+  h2 {
+    font-size:17px; margin:28px 0 8px; padding-top:14px; border-top:1px solid var(--bg-700);
+  }
+  h3 {
+    font-size:12px; margin:16px 0 6px; color:var(--text-dim);
+    text-transform:uppercase; letter-spacing:0.06em;
+  }
+  p { line-height:1.6; color:var(--text); font-size:14px; }
+  ul { margin:0 0 12px; padding-left:22px; }
+  li { line-height:1.6; font-size:14px; margin-bottom:6px; }
+  a { color:var(--accent); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  strong { color:var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="back" href="index.html">← Back to sessions</a>
+<h1>Changelog</h1>
+<p>All notable changes to racetelemetry are recorded here, newest first. This file is written for anyone browsing a published dashboard — not just developers — so entries describe what changed for you as a viewer or driver, in plain language.</p>
+<h2>[Unreleased]</h2>
+<h2>[1.0.0] - 2026-07-20</h2>
+<h3>Added</h3>
+<ul><li><strong>The dashboard</strong> — one page per session with a map, a lap-by-lap stats table, speed and &quot;delta vs. reference lap&quot; charts, and sector/corner splits, replacing a pile of separate map/chart files you used to have to flip between.</li><li><strong>Track dashboards</strong> — a second dashboard that combines every session ever recorded at a given track into one page, so you can compare a lap from today against a lap from months ago, not just laps within one outing.</li><li><strong>Lap replay</strong> — play back one or several laps at once on the map with a scrub bar and 1x/2x/4x speed control: a ghost marker per lap moves along the track in sync, with a live table of each lap&#x27;s speed and its gap to the reference lap at that same moment.</li><li><strong>A published, shareable site</strong> (`racetelemetry publish`) — builds a folder of dashboards you can put on GitHub Pages so a co-driver, parent, or teammate can browse results themselves, without you emailing files around.</li><li><strong>Automatic track recognition</strong> — the recorder figures out which track you&#x27;re at from the first GPS fix of the session; no need to tell it by hand.</li><li><strong>GPS quality tools</strong> — a smoothing filter that cuts GPS jitter, a &quot;reference line&quot; built from the median of every lap ever recorded at a track, a tool to flag laps that drifted off that line (or off the track entirely), and a slow-drift correction tool for GPS that wanders over the course of a session.</li><li><strong>G-force colouring on the map</strong> — colour a lap&#x27;s trace by how hard the car is working (combined lateral + braking/accel G), the same colour scale as the standalone `gg-map` view.</li><li><strong>In-dashboard gate editing</strong> — drag sector and corner markers directly on the map to fine-tune where split times are measured, with a one-click export you (or the owner) can paste into the track&#x27;s configuration to make it permanent for everyone.</li><li><strong>A km/h ↔ mph toggle</strong> for anyone more comfortable reading speeds in imperial units.</li><li><strong>A mobile-friendly layout</strong> — the lap list and replay controls collapse down to a single line on a phone screen instead of crowding it.</li></ul>
+<h3>Changed</h3>
+<ul><li><strong>Lap timing accuracy</strong> — a lap&#x27;s start/finish crossing is now stamped at the midpoint of the car&#x27;s pass through the finish area rather than the moment it exits, which used to drift with how fast the car was going. Where a precise finish *line* (rather than just a circle) has been set up for a track, timing is tighter still — accurate to roughly ±10-20 milliseconds instead of ±100ms+. Sessions recorded before this change can be re-timed after the fact without re-recording.</li><li>The dashboard&#x27;s delta chart (how far ahead/behind you are through the lap) now compares against whichever lap is fastest among the ones you&#x27;ve currently ticked on, rather than always the single fastest lap of the whole session.</li></ul>
+<h3>Fixed</h3>
+<ul><li>A single bad GPS reading could previously stretch a lap&#x27;s whole distance scale, leaving sector and corner markers stranded well past where that lap&#x27;s own speed trace actually ends on the chart. Distance calculations now discard those physically-impossible jumps.</li><li>A session with drift-corrected GPS data used to permanently greyed-out the &quot;Smoothed&quot; trace option on the map, even though it had already been computed. Both the smoothed and corrected traces are now kept and offered as separate choices.</li></ul>
+</div>
+</body>
+</html>
