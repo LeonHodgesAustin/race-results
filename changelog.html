@@ -39,6 +39,13 @@
 <h1>Changelog</h1>
 <p>All notable changes to racetelemetry are recorded here, newest first. This file is written for anyone browsing a published dashboard — not just developers — so entries describe what changed for you as a viewer or driver, in plain language.</p>
 <h2>[Unreleased]</h2>
+<h2>[1.2.0] - 2026-07-21</h2>
+<h3>Added</h3>
+<ul><li><strong>The Map-matched trace is now smoothed.</strong> It already snapped a lap&#x27;s position onto the saved reference line; that reference line itself can be slightly jagged point-to-point (it&#x27;s built from a per-point median across many laps), which used to show up as visible zig-zag as a lap moved along it. The line drawn is now a lightly smoothed version — how far along the lap the car is judged to be, and the off-line distance shown elsewhere, are unaffected.</li></ul>
+<h3>Changed</h3>
+<ul><li><strong>Replay ghost markers now follow whichever map trace is selected</strong> (Raw/Smoothed/Corrected/Map-matched), instead of always following the raw GPS trace regardless of what&#x27;s shown on the map. Switching trace source while replay is paused also moves any parked marker immediately.</li></ul>
+<h3>Fixed</h3>
+<ul><li><strong>Scrolling past the map no longer zooms it.</strong> A wheel or trackpad scroll used to zoom the map when it happened to pass over it on the way down the page; the map now only zooms via pinch or the +/- control.</li></ul>
 <h2>[1.1.0] - 2026-07-20</h2>
 <h3>Added</h3>
 <ul><li><strong>A &quot;Map-matched&quot; map trace option</strong>, alongside Raw/Smoothed/Corrected — snaps a lap&#x27;s position to the saved reference line using how far the car has travelled (not its raw, possibly-biased GPS position) to figure out where along the track it actually is. For a session with severe, sustained GPS bias — smoothly wrong for tens of seconds at a time, not just brief jitter — this is the only trace that stays usable, at the cost of throwing away any real within-lap line variation for the stretches it engages on. Meant for comparing lap *progress* (where was I faster or slower) on an otherwise-untrustworthy session, not for line analysis. Disabled until a reference line has been built for the track (`racetelemetry trackline`).</li></ul>
