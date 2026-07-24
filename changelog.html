@@ -39,6 +39,9 @@
 <h1>Changelog</h1>
 <p>All notable changes to racetelemetry are recorded here, newest first. This file is written for anyone browsing a published dashboard — not just developers — so entries describe what changed for you as a viewer or driver, in plain language.</p>
 <h2>[Unreleased]</h2>
+<h2>[1.3.0] - 2026-07-24</h2>
+<h3>Changed</h3>
+<ul><li><strong>The Smoothed map trace (`show --fuse` and the dashboard&#x27;s Smoothed toggle) is now more detailed between GPS points</strong>, when a session has IMU data and a usable calibration. It used to only assume steady speed between each 10Hz GPS fix; it now uses the car&#x27;s actual measured motion (from the IMU) to fill in that gap, so quick changes in speed or direction show up between fixes instead of being smoothed into a straight line. Sessions without IMU coverage, or where the calibration isn&#x27;t confident enough, look exactly as before.</li></ul>
 <h2>[1.2.0] - 2026-07-21</h2>
 <h3>Added</h3>
 <ul><li><strong>The Map-matched trace is now smoothed.</strong> It already snapped a lap&#x27;s position onto the saved reference line; that reference line itself can be slightly jagged point-to-point (it&#x27;s built from a per-point median across many laps), which used to show up as visible zig-zag as a lap moved along it. The line drawn is now a lightly smoothed version — how far along the lap the car is judged to be, and the off-line distance shown elsewhere, are unaffected.</li></ul>
