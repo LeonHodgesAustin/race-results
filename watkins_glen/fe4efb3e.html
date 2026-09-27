@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- rt-fingerprint: cbd87348effeb507 -->
+<!-- rt-fingerprint: 590bcb0cad97f74e -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -117,6 +117,12 @@
   table.stats tr.group-header.group-sectors td { background: rgba(134,239,172,0.07); }
   table.stats tr.group-header.group-corners td { background: rgba(244,114,182,0.07); }
   table.stats tr.group-header.group-segments td { background: rgba(250,204,21,0.07); }
+  .stack-cursor { margin-top: 8px; font-size: 13px; }
+  table.stack-table { border-collapse: collapse; width: 100%; }
+  table.stack-table th, table.stack-table td { padding: 4px 8px; text-align: right; border-bottom: 1px solid var(--bg-700); white-space: nowrap; }
+  table.stack-table th:first-child, table.stack-table td:first-child { text-align: left; }
+  table.stack-table thead th { color: var(--text-dim); font-weight: 600; font-size: 12px; }
+  table.stack-table tr.at-cursor th { text-align: left; color: var(--text); font-size: 13px; }
   table.stats tr.group-header.group-g td { background: rgba(250,204,21,0.07); }
   .empty-note { color:var(--text-dim); font-size:13px; }
   .replay-controls { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
@@ -242,9 +248,11 @@
     }
     #speed-panel.tab-active #speed-chart,
     #accel-panel.tab-active #accel-chart,
-    #delta-panel.tab-active #delta-chart {
+    #delta-panel.tab-active #delta-chart,
+    #stack-panel.tab-active #stack-chart {
       flex: 1 1 auto; min-height: 0;
     }
+    #stack-panel.tab-active .stack-cursor { flex: 0 0 auto; max-height: 34dvh; overflow-y: auto; }
     #app-footer { display: none; }
   }
   .tab-bar { display: none; }
@@ -369,6 +377,12 @@
     </div>
   </div>
 
+  <div class="panel" id="stack-panel">
+    <h2 id="stack-chart-heading">Stacked comparison</h2>
+    <div id="stack-chart"></div>
+    <div id="stack-cursor" class="stack-cursor"><span class="empty-note">Hover or touch the chart to read every lap's values at that point.</span></div>
+  </div>
+
   <div class="panel" id="stats-panel">
     <h2>Stats <span class="chip" id="custom-gates-badge" style="display:none;">Custom gates</span></h2>
     <div id="stats-table-wrap"></div>
@@ -392,6 +406,7 @@
 
 <nav class="tab-bar" id="tab-bar">
   <button class="tab-btn active" data-tab="map-panel">Map</button>
+  <button class="tab-btn" data-tab="stack-panel">Stack</button>
   <button class="tab-btn" data-tab="stats-panel">Stats</button>
   <button class="tab-btn" data-tab="speed-panel">Speed</button>
   <button class="tab-btn" data-tab="accel-panel">G-Force</button>
@@ -419,7 +434,7 @@
 (function () {
   "use strict";
   var DATA = JSON.parse(document.getElementById('dashboard-payload').textContent);
-  var RENDER_FINGERPRINT = "cbd87348effeb507";
+  var RENDER_FINGERPRINT = "590bcb0cad97f74e";
 
   // ── payload axes/channels -> per-lap working arrays ────────────────────
   // Each lap arrives as named time `axes` plus `channels` that reference one
@@ -939,6 +954,9 @@
   }
   var hoverMarker = null;
   var speedChartHoverBound = false;
+  var stackHoverBound = false;
+  var stackState = null;   // arrays behind the stacked chart, read by the cursor readout
+  var stackRaf = null, stackPendingD = null;
   var deltaChartHoverBound = false;
 
   // Wires a chart div's hover/unhover events to move a marker on the map.
@@ -2042,6 +2060,165 @@
     });
   }
 
+  // ── stacked comparison ──────────────────────────────────────────────
+  // Speed, delta and longitudinal G in one figure on a single shared distance
+  // axis (zoom/pan moves all three together), with one cursor line through
+  // every panel, the segment strip on top, a map dot at the cursor, and a
+  // table of every selected lap's values at that distance -- the "one screen"
+  // way to read a lap against another without scrolling between charts.
+  function stackSegmentAt(d) {
+    var gates = (effectiveGates().corners || []).slice().sort(function (a, b) { return a.number - b.number; });
+    var prev = 0;
+    for (var i = 0; i < gates.length; i++) {
+      var c = gates[i];
+      if (c.entry_dist_m === null || c.entry_dist_m === undefined || c.exit_dist_m === null || c.exit_dist_m === undefined) return null;
+      var d0 = Math.max(prev, c.entry_dist_m), d1 = Math.max(d0, c.exit_dist_m);
+      if (d < d0) return segmentLabel({ kind: 'straight', index: i }, gates);
+      if (d <= d1) return c.name + " (corner)";
+      prev = d1;
+    }
+    return gates.length ? segmentLabel({ kind: 'straight', index: gates.length }, gates) : null;
+  }
+
+  function stackFmt(v, dp) { return (v === null || v === undefined || isNaN(v)) ? "—" : v.toFixed(dp); }
+
+  function updateStackCursor(d) {
+    var st = stackState;
+    var wrap = document.getElementById('stack-cursor');
+    var div = document.getElementById('stack-chart');
+    if (!st || !wrap || !div) return;
+    if (st.cursorShape !== null) {
+      var upd = {}; upd['shapes[' + st.cursorShape + '].x0'] = d; upd['shapes[' + st.cursorShape + '].x1'] = d;
+      upd['shapes[' + st.cursorShape + '].visible'] = true;
+      Plotly.relayout(div, upd);
+    }
+    var seg = stackSegmentAt(d);
+    var html = '<table class="stack-table"><thead><tr class="at-cursor"><th colspan="5">' + Math.round(d) + ' m' +
+      (seg ? ' &middot; ' + seg : '') + '</th></tr><tr><th>Lap</th><th>Time</th><th>Speed (' + spdUnit() + ')</th>' +
+      (st.hasDelta ? '<th>&Delta; vs ' + st.refLabel + '</th>' : '') + (st.hasG ? '<th>Long G</th>' : '') + '</tr></thead><tbody>';
+    st.rows.forEach(function (r) {
+      var l = r.lap;
+      var t = interpScalarAt(l.dist_m, l.t_s, d);
+      var v = interpScalarAt(l.dist_m, l.speed_kmh, d);
+      var dl = r.delta ? interpScalarAt(st.grid, r.delta, d) : null;
+      var g = r.glon ? interpScalarAt(r.distImu, r.glon, d) : null;
+      html += '<tr><td><span class="swatch" style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:' +
+        colorFor(l.n) + '"></span>' + lapLabel(l) + '</td><td>' + (t === null ? '—' : fmtTime(t)) + '</td><td>' +
+        stackFmt(v === null ? null : toSpd(v), 0) + '</td>' +
+        (st.hasDelta ? '<td>' + (dl === null ? '—' : (dl >= 0 ? '+' : '') + dl.toFixed(3)) + '</td>' : '') +
+        (st.hasG ? '<td>' + stackFmt(g, 2) + '</td>' : '') + '</tr>';
+    });
+    wrap.innerHTML = html + '</tbody></table>';
+    // Map dot on the fastest selected lap, same as the single charts do.
+    var lead = st.rows.length ? st.rows[0].lap : null;
+    if (lead && lead.dist_m.length) {
+      var idx = nearestIndexForDistance(lead, d);
+      if (idx >= 0 && lead.lat[idx] !== undefined) showHoverMarker(lead.lat[idx], lead.lon[idx], colorFor(lead.n));
+    }
+  }
+
+  function renderStackChart() {
+    var panel = document.getElementById('stack-panel');
+    var div = document.getElementById('stack-chart');
+    if (!panel || !div) return;
+    var sel = selectedLapsSorted().filter(function (l) { return !l.capped && l.dist_m.length; });
+    if (!sel.length) { stackState = null; Plotly.purge(div); return; }
+
+    var grid = DATA.grid_m || [];
+    var refLap = grid.length ? fastestSelectedLap(sel, grid) : null;
+    var deltaLaps = grid.length ? sel.filter(function (l) { return l.delta_s.length === grid.length; }) : [];
+    var gLaps = sel.filter(function (l) { return l.g_lon && l.g_lon.length; });
+    var hasDelta = deltaLaps.length > 0, hasG = gLaps.length > 0;
+    var lead = refLap || sel.slice().sort(function (a, b) { return (a.time_s || 1e9) - (b.time_s || 1e9); })[0];
+
+    var panels = [{ key: 'speed', w: 3 }];
+    if (hasDelta) panels.push({ key: 'delta', w: 1.3 });
+    if (hasG) panels.push({ key: 'g', w: 1.3 });
+    var gap = 0.04, avail = 1 - gap * (panels.length - 1), totalW = panels.reduce(function (a, p) { return a + p.w; }, 0), top = 1;
+    panels.forEach(function (p, i) {
+      var h = avail * p.w / totalW;
+      p.d1 = top; p.d0 = top - h; top = p.d0 - gap;
+      p.n = i + 1; p.xa = 'x' + (i ? p.n : ''); p.ya = 'y' + (i ? p.n : '');
+    });
+    var pf = {}; panels.forEach(function (p) { pf[p.key] = p; });
+    var bottom = panels[panels.length - 1];
+
+    var traces = [];
+    sel.forEach(function (l, j) {
+      var y = l.speed_kmh.map(toSpd);
+      if (l.gps_gaps && l.gps_gaps.length) {
+        var ga = gapAwareRuns(l, axisFor(l, 'speed_kmh'));
+        ga.hidden.forEach(function (h, i) { if (h) y[i] = null; });
+        ga.links.forEach(function (lk) { y[lk[1]] = null; });
+      }
+      traces.push({ x: l.dist_m, y: y, mode: 'lines', name: lapLabel(l), legendgroup: lapLabel(l), hoverinfo: 'none',
+        xaxis: pf.speed.xa, yaxis: pf.speed.ya, line: { color: colorFor(l.n), width: 2 } });
+    });
+    var rows = sel.map(function (l) { return { lap: l, delta: null, glon: null, distImu: null }; });
+    var byN = {}; rows.forEach(function (r) { byN[r.lap.n] = r; });
+    if (hasDelta) {
+      deltaLaps.forEach(function (l) {
+        var y = refLap ? deltaVsSelectedLap(l.delta_s, refLap.delta_s) : l.delta_s;
+        byN[l.n].delta = y;
+        traces.push({ x: grid, y: y, mode: 'lines', name: lapLabel(l), legendgroup: lapLabel(l), showlegend: false, hoverinfo: 'none',
+          xaxis: pf.delta.xa, yaxis: pf.delta.ya, line: { color: colorFor(l.n), width: 2 } });
+      });
+    }
+    if (hasG) {
+      gLaps.forEach(function (l) {
+        var dImu = resampleOnto(l.dist_m, axisFor(l, 'dist_m'), axisFor(l, 'g_lon'));
+        byN[l.n].glon = l.g_lon; byN[l.n].distImu = dImu;
+        traces.push({ x: dImu, y: l.g_lon, mode: 'lines', name: lapLabel(l), legendgroup: lapLabel(l), showlegend: false, hoverinfo: 'none',
+          xaxis: pf.g.xa, yaxis: pf.g.ya, line: { color: colorFor(l.n), width: 1.3 } });
+      });
+    }
+    // Fastest selected lap first: it drives the map dot.
+    rows.sort(function (a, b) { return (a.lap === lead ? -1 : 0) - (b.lap === lead ? -1 : 0); });
+
+    var refLabel = refLap ? lapLabel(refLap) : 'fastest';
+    var layout = Object.assign({}, PLOTLY_LAYOUT_BASE, { margin: { t: 24, r: 20, l: 60, b: 44 }, hovermode: 'x', height: 640 });
+    delete layout.xaxis;
+    panels.forEach(function (p) {
+      var xa = { domain: [0, 1], anchor: p.ya, gridcolor: '#334155', zerolinecolor: '#334155', showticklabels: p === bottom };
+      if (p === bottom) xa.title = 'Distance (m)'; else xa.matches = bottom.xa;
+      layout['xaxis' + (p.n > 1 ? p.n : '')] = xa;
+      var ya = { domain: [p.d0, p.d1], anchor: p.xa, gridcolor: '#334155', zeroline: false };
+      // Short titles on a narrow chart, or three stacked axis labels collide.
+      var narrow = ((div.clientWidth) || 600) < 560;
+      if (p.key === 'speed') ya.title = narrow ? 'Speed' : 'Speed (' + spdUnit() + ')';
+      else if (p.key === 'delta') { ya.title = narrow ? '\u0394 s' : '\u0394 s vs ' + refLabel; ya.zeroline = true; ya.zerolinecolor = '#64748b'; }
+      else ya.title = narrow ? 'G' : 'Long G';
+      layout['yaxis' + (p.n > 1 ? p.n : '')] = ya;
+    });
+    var ga2 = gateShapesAndAnnotations();
+    layout.shapes = ga2.shapes.slice(); layout.annotations = ga2.annotations.slice();
+    if (hasG) layout.shapes.push({ type: 'line', xref: 'x', yref: 'y' + pf.g.n, x0: 0, x1: 1, y0: 0, y1: 0,
+      line: { color: '#64748b', width: 1, dash: 'dot' } });
+    // Zero line for G spans the full x-range via paper x.
+    if (hasG) { var zl = layout.shapes[layout.shapes.length - 1]; zl.xref = 'paper'; zl.yref = 'y' + (pf.g.n > 1 ? pf.g.n : ''); }
+    layout.legend = Object.assign({}, PLOTLY_LAYOUT_BASE.legend);
+    applySegmentStrip(layout, 'stack-chart');
+    fitTabHeight(layout);
+    layout.shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: 0, x1: 0, y0: 0, y1: 1, visible: false,
+      line: { color: '#f8fafc', width: 1 } });
+    var cursorShape = layout.shapes.length - 1;
+
+    var heading = document.getElementById('stack-chart-heading');
+    if (heading) heading.textContent = 'Stacked comparison' + (hasDelta ? ' (\u0394 vs ' + refLabel + ')' : '');
+    stackState = { rows: rows, grid: grid, hasDelta: hasDelta, hasG: hasG, refLabel: refLabel, cursorShape: cursorShape };
+    Plotly.react(div, traces, layout, { responsive: true, displaylogo: false });
+
+    if (!stackHoverBound) {
+      div.on('plotly_hover', function (evt) {
+        if (!evt.points || !evt.points.length) return;
+        stackPendingD = evt.points[0].x;
+        if (!stackRaf) stackRaf = requestAnimationFrame(function () { stackRaf = null; updateStackCursor(stackPendingD); });
+      });
+      div.on('plotly_unhover', function () { hideHoverMarker(); });
+      stackHoverBound = true;
+    }
+  }
+
   // ── replay ──────────────────────────────────────────────────────────
   // No DOM access, kept isolatable so a node-only test can extract just
   // this function's source (between the PURE_FN markers) and exercise it
@@ -2295,6 +2472,7 @@
   // same 700px media query and is simply inert above it.
   var CHART_PANEL_TO_DIV = {
     'speed-panel': 'speed-chart', 'accel-panel': 'accel-chart', 'delta-panel': 'delta-chart',
+    'stack-panel': 'stack-chart',
   };
 
   // Everything above the active panel's own top edge, plus the fixed tab bar
@@ -2351,6 +2529,7 @@
     // speed chart it does NOT need re-rendering on the km/h<->mph toggle.
     renderAccelChart();
     renderDeltaChart();
+    renderStackChart();
     var dur = replayDuration();
     if (replay.t > dur) replay.t = dur;
     renderReplayFrame();
@@ -2367,6 +2546,7 @@
     renderTable();
     renderSpeedChart();
     renderDeltaChart();
+    renderStackChart();
     // The replay table shows Speed and "delta vs ref" in the same units, so
     // it has to be re-rendered here too. Without this it keeps whatever units
     // were active when it was last drawn, until the next play/scrub tick
