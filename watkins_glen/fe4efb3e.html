@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- rt-fingerprint: 590bcb0cad97f74e -->
+<!-- rt-fingerprint: f7b0c9f2fc7aaeec -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -117,6 +117,11 @@
   table.stats tr.group-header.group-sectors td { background: rgba(134,239,172,0.07); }
   table.stats tr.group-header.group-corners td { background: rgba(244,114,182,0.07); }
   table.stats tr.group-header.group-segments td { background: rgba(250,204,21,0.07); }
+  .corner-loss-heading { margin: 0 0 8px; font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .corner-loss-heading .hint { text-transform: none; letter-spacing: normal; font-weight: normal; }
+  table.corner-loss { margin-bottom: 20px; }
+  table.corner-loss tr:hover td { background: var(--bg-700); }
+  table.corner-loss td.best:hover { background: var(--purple-bg); }
   .stack-cursor { margin-top: 8px; font-size: 13px; }
   table.stack-table { border-collapse: collapse; width: 100%; }
   table.stack-table th, table.stack-table td { padding: 4px 8px; text-align: right; border-bottom: 1px solid var(--bg-700); white-space: nowrap; }
@@ -434,7 +439,7 @@
 (function () {
   "use strict";
   var DATA = JSON.parse(document.getElementById('dashboard-payload').textContent);
-  var RENDER_FINGERPRINT = "590bcb0cad97f74e";
+  var RENDER_FINGERPRINT = "f7b0c9f2fc7aaeec";
 
   // ── payload axes/channels -> per-lap working arrays ────────────────────
   // Each lap arrives as named time `axes` plus `channels` that reference one
@@ -1643,6 +1648,64 @@
   }
   // PURE_FN9_END
 
+  // PURE_FN10_START
+  // The best (lowest) time any lap in `segsList` has recorded at each
+  // segment index -- segsList entries line up positionally (straight,
+  // corner, straight, ...) since they all come from computeSegments() on
+  // the same sorted corner-gate list. A null/missing entry (a lap with no
+  // usable segments) is simply skipped at every index, not just dropped
+  // wholesale, so one lap's gap in coverage never hides another's real time.
+  function segmentBestTimes(segsList) {
+    var best = [];
+    segsList.forEach(function (segs) {
+      if (!segs) return;
+      segs.forEach(function (s, i) {
+        if (best[i] === undefined || s.time_s < best[i]) best[i] = s.time_s;
+      });
+    });
+    return best;
+  }
+
+  // Ranks corners (never straights) by how much time the worst-hit lap in
+  // `lapsSegs` lost there versus `bestTimes` (typically every lap ever
+  // recorded, from segmentBestTimes() above) -- "where am I losing time"
+  // as a sorted list rather than something to spot by eye in a strip.
+  // `gates`: corner defs sorted by number (corner i sits at segment index
+  // 2*i+1 in the straight/corner/straight/... numbering computeSegments
+  // uses). `lapsSegs`: [{ key, segs }, ...], segs from computeSegments() or
+  // null. A lap missing a usable segment contributes a null loss for every
+  // corner rather than being dropped from the ranking entirely.
+  function cornerLossRanking(gates, lapsSegs, bestTimes) {
+    var out = [];
+    gates.forEach(function (g, i) {
+      var segIdx = 2 * i + 1;
+      var losses = [], maxLoss = null;
+      lapsSegs.forEach(function (entry) {
+        var t = entry.segs ? entry.segs[segIdx].time_s : null;
+        var best = bestTimes[segIdx];
+        var loss = (t !== null && t !== undefined && best !== undefined) ? (t - best) : null;
+        losses.push({ key: entry.key, loss: loss, time_s: t });
+        if (loss !== null && (maxLoss === null || loss > maxLoss)) maxLoss = loss;
+      });
+      out.push({ number: g.number, name: g.name, losses: losses, maxLoss: maxLoss });
+    });
+    out.sort(function (a, b) {
+      var av = a.maxLoss === null ? -Infinity : a.maxLoss, bv = b.maxLoss === null ? -Infinity : b.maxLoss;
+      return bv - av;
+    });
+    return out;
+  }
+  // PURE_FN10_END
+
+  // Not itself pure (reads DATA/effectiveLapCorners), but the one place both
+  // the segment strip and the "Where time is lost" table get "the best any
+  // lap has ever done" from, so the two always agree.
+  function allLapsBestSegmentTimes() {
+    var segsList = DATA.laps.filter(function (l) { return !l.excluded && !l.capped && l.time_s !== null && l.time_s !== undefined; })
+      .map(function (l) { return computeSegments(effectiveLapCorners(l), l.time_s); });
+    return segmentBestTimes(segsList);
+  }
+
   // ── stats table ─────────────────────────────────────────────────────
   function bestOf(values, better) {
     var nums = values.filter(function (v) { return v !== null && v !== undefined; });
@@ -1690,7 +1753,8 @@
         var gate = (effectiveGates().corners || [])[idx];
         var name = gate ? gate.name : ("C" + (idx + 1));
         rows.push({
-          label: name + " min " + spdUnit(), group: "corners", better: "max", dp: 1, fmt: fmtSpeed, cornerIndex: idx,
+          label: name + " min " + spdUnit(), group: "corners", better: "max", dp: 1, fmt: fmtSpeed,
+          cornerNumber: gate ? gate.number : null,
           values: sel.map(function (l) { return (effCorners[l.n] && effCorners[l.n][idx]) ? effCorners[l.n][idx].min_speed_kmh : null; }),
         });
       })(j);
@@ -1710,9 +1774,42 @@
         rows.push({
           label: segmentLabel(proto, segGates), group: "segments", better: "min", dp: 3,
           fmt: function (v) { return (v === null || v === undefined) ? "—" : v.toFixed(3); },
+          cornerNumber: (proto && proto.kind === 'corner' && segGates[proto.index]) ? segGates[proto.index].number : null,
           values: sel.map(function (l) { return effSegs[l.n] ? effSegs[l.n][idx].time_s : null; }),
         });
       })(k);
+    }
+
+    // "Where time is lost": corners only, ranked by how much time was lost
+    // there versus the best ANY (non-excluded, non-capped) lap has ever put
+    // together in that segment -- not just the best of the currently
+    // selected laps, which the "Segment times" group above already covers.
+    // Clicking a corner zooms the stacked chart to it and pans the map.
+    var lossHtml = '';
+    if (segGates.length) {
+      var allBest = allLapsBestSegmentTimes();
+      var ranking = cornerLossRanking(segGates, sel.map(function (l) { return { key: l.n, segs: effSegs[l.n] }; }), allBest);
+      var shown = ranking.filter(function (r) { return r.maxLoss !== null; });
+      if (shown.length) {
+        lossHtml = '<h3 class="corner-loss-heading">Where time is lost <span class="hint">(vs. the best any lap has done there)</span></h3>' +
+          '<table class="stats corner-loss"><thead><tr><th>Corner</th>';
+        sel.forEach(function (l) { lossHtml += '<th style="color:' + colorFor(l.n) + '">' + lapLabel(l) + '</th>'; });
+        lossHtml += '</tr></thead><tbody>';
+        shown.forEach(function (r) {
+          lossHtml += '<tr data-corner-number="' + r.number + '"><td class="corner-loss-name">' + r.name + '</td>';
+          r.losses.forEach(function (entry) {
+            if (entry.time_s === null || entry.time_s === undefined) { lossHtml += '<td>—</td>'; return; }
+            var isBest = entry.loss !== null && entry.loss < 0.0005;
+            var cell = entry.time_s.toFixed(3);
+            if (!isBest && entry.loss !== null) {
+              cell += '<span class="delta" style="color:' + lossColor(entry.loss) + '">+' + entry.loss.toFixed(3) + '</span>';
+            }
+            lossHtml += '<td class="' + (isBest ? 'best' : '') + '">' + cell + '</td>';
+          });
+          lossHtml += '</tr>';
+        });
+        lossHtml += '</tbody></table>';
+      }
     }
 
     rows.push({ label: "Peak Lat G", group: "g", better: "max", dp: 2, fmt: fmtG, values: sel.map(function (l) { return l.g ? l.g.peak_lat_g : null; }) });
@@ -1746,20 +1843,29 @@
       html += '</tr>';
     });
     html += '</tbody></table>';
-    wrap.innerHTML = html;
+    wrap.innerHTML = lossHtml + html;
 
-    // Corner rows pan/zoom the map to that corner's entry-exit window on
-    // click. Looked up by data-row-idx (the row's index in `rows`) rather
-    // than tbody-child position, since group-header rows are now
-    // interspersed and would otherwise shift a plain positional index.
+    // Corner rows (and corner segment-time rows) zoom the stacked chart to
+    // that corner and pan the map on click. Looked up by data-row-idx (the
+    // row's index in `rows`) rather than tbody-child position, since
+    // group-header rows are interspersed and would otherwise shift a plain
+    // positional index. Keyed by corner *number*, not array index, so it
+    // still points at the right corner if a custom gate set ever reorders
+    // effectiveGates().corners relative to the server payload.
     rows.forEach(function (row, i) {
-      if (row.cornerIndex === undefined || row.cornerIndex === null) return;
+      if (row.cornerNumber === undefined || row.cornerNumber === null) return;
       var tr = wrap.querySelector('tr[data-row-idx="' + i + '"]');
       if (!tr) return;
       var labelTd = tr.querySelector('td:first-child');
       labelTd.style.cursor = 'pointer';
-      labelTd.title = 'Click to pan the map to this corner';
-      labelTd.addEventListener('click', function () { panToCorner(row.cornerIndex); });
+      labelTd.title = 'Click to zoom the Stack view and pan the map to this corner';
+      labelTd.addEventListener('click', function () { focusCorner(row.cornerNumber); });
+    });
+
+    wrap.querySelectorAll('table.corner-loss tr[data-corner-number]').forEach(function (tr) {
+      tr.style.cursor = 'pointer';
+      tr.title = 'Click to zoom the Stack view and pan the map to this corner';
+      tr.addEventListener('click', function () { focusCorner(parseInt(tr.getAttribute('data-corner-number'), 10)); });
     });
   }
 
@@ -1768,6 +1874,31 @@
     if (!c || !map) return;
     var bounds = L.latLngBounds([[c.entry.lat, c.entry.lon], [c.exit.lat, c.exit.lon]]);
     map.fitBounds(bounds, { padding: [80, 80], maxZoom: 18 });
+  }
+
+  // Corner number (not array index -- stable across a reordered custom gate
+  // set) -> zoom the stacked chart's shared distance axis to that corner
+  // (with a little padding either side) and pan the map, same as clicking a
+  // corner in the stats table. On a phone, also switches to the Stack tab
+  // so the zoom is actually visible instead of happening off-screen.
+  function focusCorner(number) {
+    var gates = effectiveGates().corners || [];
+    var idx = -1;
+    for (var i = 0; i < gates.length; i++) { if (gates[i].number === number) { idx = i; break; } }
+    if (idx < 0) return;
+    var c = gates[idx];
+    if (c.entry_dist_m !== null && c.entry_dist_m !== undefined && c.exit_dist_m !== null && c.exit_dist_m !== undefined) {
+      var pad = Math.max(20, (c.exit_dist_m - c.entry_dist_m) * 0.4);
+      var range = [Math.max(0, c.entry_dist_m - pad), c.exit_dist_m + pad];
+      var stackDiv = document.getElementById('stack-chart');
+      if (stackDiv && stackState && stackState.bottomAxisKey) {
+        var upd = {}; upd[stackState.bottomAxisKey + '.range'] = range;
+        Plotly.relayout(stackDiv, upd);
+      }
+    }
+    panToCorner(idx);
+    var tabBar = document.getElementById('tab-bar');
+    if (tabBar && getComputedStyle(tabBar).display !== 'none') activateTab('stack-panel');
   }
 
   // ── charts ──────────────────────────────────────────────────────────
@@ -1857,11 +1988,7 @@
     });
     defs.push({ kind: 'straight', index: gates.length, d0: prev, d1: Math.max(prev, xEnd) });
 
-    var bestAll = [];
-    DATA.laps.filter(function (l) { return !l.excluded && !l.capped && l.time_s !== null && l.time_s !== undefined; }).forEach(function (l) {
-      var sg = computeSegments(effectiveLapCorners(l), l.time_s);
-      if (sg) sg.forEach(function (x, i) { if (bestAll[i] === undefined || x.time_s < bestAll[i]) bestAll[i] = x.time_s; });
-    });
+    var bestAll = allLapsBestSegmentTimes();
 
     var el = document.getElementById(divId);
     var plotW = Math.max(200, ((el && el.clientWidth) || 360) - 75);
@@ -2205,7 +2332,8 @@
 
     var heading = document.getElementById('stack-chart-heading');
     if (heading) heading.textContent = 'Stacked comparison' + (hasDelta ? ' (\u0394 vs ' + refLabel + ')' : '');
-    stackState = { rows: rows, grid: grid, hasDelta: hasDelta, hasG: hasG, refLabel: refLabel, cursorShape: cursorShape };
+    stackState = { rows: rows, grid: grid, hasDelta: hasDelta, hasG: hasG, refLabel: refLabel, cursorShape: cursorShape,
+      bottomAxisKey: 'xaxis' + (bottom.n > 1 ? bottom.n : '') };
     Plotly.react(div, traces, layout, { responsive: true, displaylogo: false });
 
     if (!stackHoverBound) {
