@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- rt-fingerprint: f7b0c9f2fc7aaeec -->
+<!-- rt-fingerprint: 1664ea5cd0644b09 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -122,6 +122,8 @@
   table.corner-loss { margin-bottom: 20px; }
   table.corner-loss tr:hover td { background: var(--bg-700); }
   table.corner-loss td.best:hover { background: var(--purple-bg); }
+  table.corner-loss .cause { color: var(--accent); font-style: italic; margin-top: 2px; }
+  table.corner-loss td.best .cause { color: var(--purple); opacity: 0.85; font-style: normal; }
   .stack-cursor { margin-top: 8px; font-size: 13px; }
   table.stack-table { border-collapse: collapse; width: 100%; }
   table.stack-table th, table.stack-table td { padding: 4px 8px; text-align: right; border-bottom: 1px solid var(--bg-700); white-space: nowrap; }
@@ -439,7 +441,7 @@
 (function () {
   "use strict";
   var DATA = JSON.parse(document.getElementById('dashboard-payload').textContent);
-  var RENDER_FINGERPRINT = "f7b0c9f2fc7aaeec";
+  var RENDER_FINGERPRINT = "1664ea5cd0644b09";
 
   // ── payload axes/channels -> per-lap working arrays ────────────────────
   // Each lap arrives as named time `axes` plus `channels` that reference one
@@ -1697,6 +1699,110 @@
   }
   // PURE_FN10_END
 
+  // PURE_FN11_START
+  // Finds where braking starts and where the driver gets back on the
+  // throttle, from a longitudinal-G trace (gLonArr: negative = braking,
+  // positive = driving) and its own distance axis (distArr, same length,
+  // monotonic). Searched over [entryDist - padM, exitDist + padM] -- a
+  // driver brakes before the entry gate and finishes applying throttle
+  // after the exit gate, not strictly inside gate-to-gate. The apex is the
+  // index of minimum speed strictly *within* the gate-to-gate window
+  // (matches how analysis/corners.py's own server-side apex detection
+  // works), so braking is only ever searched for up to the apex and
+  // throttle only ever searched for from the apex onward.
+  function cornerBrakeThrottle(distArr, gLonArr, speedArr, entryDist, exitDist, opts) {
+    opts = opts || {};
+    var pad = opts.padM || 150, thresh = opts.gThresh || 0.15;
+    var n = distArr ? distArr.length : 0;
+    if (!n || !gLonArr || gLonArr.length !== n) return null;
+    var lo = 0, hi = n - 1;
+    while (lo < n && distArr[lo] < entryDist - pad) lo++;
+    while (hi >= 0 && distArr[hi] > exitDist + pad) hi--;
+    if (lo >= hi) return null;
+
+    var apexIdx = -1, apexSpeed = Infinity;
+    for (var i = lo; i <= hi; i++) {
+      if (distArr[i] < entryDist || distArr[i] > exitDist) continue;
+      var v = speedArr ? speedArr[i] : null;
+      if (v !== null && v !== undefined && v < apexSpeed) { apexSpeed = v; apexIdx = i; }
+    }
+    if (apexIdx < 0) apexIdx = lo + Math.round((hi - lo) / 2); // no speed data here -- fall back to the window's midpoint
+
+    var brakeIdx = -1, peakBrakeG = null;
+    for (var i = lo; i <= apexIdx; i++) {
+      if (gLonArr[i] !== null && gLonArr[i] !== undefined && gLonArr[i] <= -thresh) { brakeIdx = i; break; }
+    }
+    if (brakeIdx >= 0) {
+      peakBrakeG = 0;
+      for (var i = brakeIdx; i <= apexIdx; i++) {
+        if (gLonArr[i] !== null && gLonArr[i] !== undefined && gLonArr[i] < peakBrakeG) peakBrakeG = gLonArr[i];
+      }
+    }
+
+    var throttleIdx = -1, peakThrottleG = null;
+    for (var i = apexIdx; i <= hi; i++) {
+      if (gLonArr[i] !== null && gLonArr[i] !== undefined && gLonArr[i] >= thresh) { throttleIdx = i; break; }
+    }
+    if (throttleIdx >= 0) {
+      peakThrottleG = 0;
+      for (var i = throttleIdx; i <= hi; i++) {
+        if (gLonArr[i] !== null && gLonArr[i] !== undefined && gLonArr[i] > peakThrottleG) peakThrottleG = gLonArr[i];
+      }
+    }
+
+    return {
+      apexDist: distArr[apexIdx],
+      brakeDist: brakeIdx >= 0 ? distArr[brakeIdx] : null,
+      peakBrakeG: peakBrakeG,
+      throttleDist: throttleIdx >= 0 ? distArr[throttleIdx] : null,
+      peakThrottleG: peakThrottleG,
+    };
+  }
+
+  // Compares one lap's corner entry/apex/exit speeds and brake/throttle
+  // points against a reference lap's (typically the fastest one currently
+  // selected) and returns a short, plain-language reason for the
+  // difference, or null when nothing here is far enough outside normal
+  // lap-to-lap noise to be worth flagging. Checked in track order --
+  // entry, then apex, then exit -- since a slow entry usually explains away
+  // a slow exit too, and flagging both would just be restating the same
+  // problem twice. Thresholds default to this project's existing "is this
+  // difference real" conventions (analysis/corners.py's own
+  // _delta_color uses 1.5 km/h for a per-corner speed delta).
+  function diagnoseCornerLoss(lapBT, refBT, lapSpeeds, refSpeeds, opts) {
+    opts = opts || {};
+    var distTol = opts.distTolM || 5, spdTol = opts.spdTolKmh || 1.5, gTol = opts.gTol || 0.05;
+    if (!lapBT || !refBT) return null;
+
+    var entryLoss = (lapSpeeds.entry !== null && lapSpeeds.entry !== undefined && refSpeeds.entry !== null && refSpeeds.entry !== undefined)
+      ? (refSpeeds.entry - lapSpeeds.entry) : null;
+    var apexLoss = (lapSpeeds.min !== null && lapSpeeds.min !== undefined && refSpeeds.min !== null && refSpeeds.min !== undefined)
+      ? (refSpeeds.min - lapSpeeds.min) : null;
+    var exitLoss = (lapSpeeds.exit !== null && lapSpeeds.exit !== undefined && refSpeeds.exit !== null && refSpeeds.exit !== undefined)
+      ? (refSpeeds.exit - lapSpeeds.exit) : null;
+    // Positive = this lap braked deeper into the corner / got back to
+    // power later than the reference lap; negative = earlier/sooner.
+    var brakeDelta = (lapBT.brakeDist !== null && refBT.brakeDist !== null) ? (lapBT.brakeDist - refBT.brakeDist) : null;
+    var throttleDelta = (lapBT.throttleDist !== null && refBT.throttleDist !== null) ? (lapBT.throttleDist - refBT.throttleDist) : null;
+
+    if (entryLoss !== null && entryLoss > spdTol) {
+      if (brakeDelta !== null && brakeDelta < -distTol) return "Braked earlier \u2014 lost entry speed";
+      return "Slower on entry (same brake point)";
+    }
+    if (apexLoss !== null && apexLoss > spdTol) {
+      return "Lost speed at the apex";
+    }
+    if (exitLoss !== null && exitLoss > spdTol) {
+      if (throttleDelta !== null && throttleDelta > distTol) return "Back to power later";
+      if (lapBT.peakThrottleG !== null && refBT.peakThrottleG !== null && (refBT.peakThrottleG - lapBT.peakThrottleG) > gTol) {
+        return "Lighter throttle application";
+      }
+      return "Slower on exit";
+    }
+    return null;
+  }
+  // PURE_FN11_END
+
   // Not itself pure (reads DATA/effectiveLapCorners), but the one place both
   // the segment strip and the "Where time is lost" table get "the best any
   // lap has ever done" from, so the two always agree.
@@ -1791,11 +1897,30 @@
       var ranking = cornerLossRanking(segGates, sel.map(function (l) { return { key: l.n, segs: effSegs[l.n] }; }), allBest);
       var shown = ranking.filter(function (r) { return r.maxLoss !== null; });
       if (shown.length) {
+        // "Why": brake/throttle points + entry/apex/exit speeds for every
+        // selected lap, computed once (not once per corner row) and
+        // compared against whichever selected lap is currently fastest --
+        // the natural "why is THIS lap slower than the one I'm looking at"
+        // comparison, distinct from the loss numbers above (which are
+        // always against the best ANY lap has ever done, whether or not
+        // that lap happens to be selected right now).
+        var byLapKey = {}; sel.forEach(function (l) { byLapKey[l.n] = l; });
+        var gateByNumber = {}; segGates.forEach(function (g) { gateByNumber[g.number] = g; });
+        var dsg = {}; sel.forEach(function (l) { dsg[l.n] = lapDistSpeedGLon(l); });
+        var refLap = fastestOfSelected(sel);
+        function cornerStatsFor(lapKey, number) {
+          var arr = effCorners[lapKey];
+          if (!arr) return null;
+          for (var i = 0; i < arr.length; i++) { if (arr[i].number === number) return arr[i]; }
+          return null;
+        }
+
         lossHtml = '<h3 class="corner-loss-heading">Where time is lost <span class="hint">(vs. the best any lap has done there)</span></h3>' +
           '<table class="stats corner-loss"><thead><tr><th>Corner</th>';
         sel.forEach(function (l) { lossHtml += '<th style="color:' + colorFor(l.n) + '">' + lapLabel(l) + '</th>'; });
         lossHtml += '</tr></thead><tbody>';
         shown.forEach(function (r) {
+          var gate = gateByNumber[r.number];
           lossHtml += '<tr data-corner-number="' + r.number + '"><td class="corner-loss-name">' + r.name + '</td>';
           r.losses.forEach(function (entry) {
             if (entry.time_s === null || entry.time_s === undefined) { lossHtml += '<td>—</td>'; return; }
@@ -1803,6 +1928,19 @@
             var cell = entry.time_s.toFixed(3);
             if (!isBest && entry.loss !== null) {
               cell += '<span class="delta" style="color:' + lossColor(entry.loss) + '">+' + entry.loss.toFixed(3) + '</span>';
+            }
+            var lap = byLapKey[entry.key];
+            if (lap && refLap && lap === refLap) {
+              cell += '<span class="cause">reference lap</span>';
+            } else if (lap && refLap && gate && gate.entry_dist_m !== null && gate.entry_dist_m !== undefined &&
+                       gate.exit_dist_m !== null && gate.exit_dist_m !== undefined) {
+              var lBT = dsg[lap.n] ? cornerBrakeThrottle(dsg[lap.n].dist, dsg[lap.n].gLon, dsg[lap.n].speed, gate.entry_dist_m, gate.exit_dist_m) : null;
+              var rBT = dsg[refLap.n] ? cornerBrakeThrottle(dsg[refLap.n].dist, dsg[refLap.n].gLon, dsg[refLap.n].speed, gate.entry_dist_m, gate.exit_dist_m) : null;
+              var lC = cornerStatsFor(lap.n, r.number), rC = cornerStatsFor(refLap.n, r.number);
+              var cause = (lC && rC) ? diagnoseCornerLoss(lBT, rBT,
+                { entry: lC.entry_speed_kmh, min: lC.min_speed_kmh, exit: lC.exit_speed_kmh },
+                { entry: rC.entry_speed_kmh, min: rC.min_speed_kmh, exit: rC.exit_speed_kmh }) : null;
+              if (cause) cell += '<span class="cause">' + cause + '</span>';
             }
             lossHtml += '<td class="' + (isBest ? 'best' : '') + '">' + cell + '</td>';
           });
@@ -1928,6 +2066,27 @@
         showarrow: false, font: { size: 10, color: '#f472b6' }, yanchor: 'top' });
     });
     return { shapes: shapes, annotations: annotations };
+  }
+
+  // A lap's own longitudinal-G trace, resampled onto its own distance axis
+  // rather than time -- corner brake/throttle points are naturally
+  // distance-based (so they line up with the segment strip/stack chart),
+  // and every lap's g_lon already lives on its own IMU-rate axis. Null when
+  // the lap has no IMU coverage at all.
+  function lapDistSpeedGLon(l) {
+    if (!l.g_lon || !l.g_lon.length) return null;
+    var gAxis = axisFor(l, 'g_lon');
+    return {
+      dist: resampleOnto(l.dist_m, axisFor(l, 'dist_m'), gAxis),
+      gLon: l.g_lon,
+      speed: resampleOnto(l.speed_kmh, axisFor(l, 'speed_kmh'), gAxis),
+    };
+  }
+
+  function fastestOfSelected(laps) {
+    var withTime = laps.filter(function (l) { return l.time_s !== null && l.time_s !== undefined; });
+    if (!withTime.length) return null;
+    return withTime.reduce(function (best, l) { return l.time_s < best.time_s ? l : best; });
   }
 
   // ── segment strip ───────────────────────────────────────────────────
