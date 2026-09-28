@@ -39,6 +39,10 @@
 <h1>Changelog</h1>
 <p>All notable changes to racetelemetry are recorded here, newest first. This file is written for anyone browsing a published dashboard — not just developers — so entries describe what changed for you as a viewer or driver, in plain language.</p>
 <h2>[Unreleased]</h2>
+<h2>[1.6.0] - 2026-09-28</h2>
+<h3>Changed</h3>
+<ul><li><strong>On a phone or tablet, dragging a finger along a chart now reads it instead of zooming.</strong> It used to start drawing a zoom box. Now it moves the cursor line and shows every lap&#x27;s values at that point, the same as moving the mouse on a computer. It works on the Stack, Speed, G-Force and Delta charts. Swiping up or down still scrolls the page. To zoom on a phone, tap a corner in the &quot;Where time is lost&quot; or Stats table, and use the new <strong>Reset zoom</strong> button to get back to the whole lap.</li></ul>
+<ul><li><strong>The stacked comparison&#x27;s table now says what each number means.</strong> The columns are Elapsed (time since the lap started), Speed, Gap to the reference lap (red when behind, green when ahead) and Long. G (with &quot;braking&quot;, &quot;accel&quot; or &quot;neutral&quot; beside it). The lap everything is compared against is marked REF, and each other lap&#x27;s speed shows how much faster or slower it is than REF at that point. Hover over a column heading for an explanation, or tap the (i) next to it on a phone.</li></ul>
 <h2>[1.5.2] - 2026-09-27</h2>
 <h3>Fixed</h3>
 <ul><li><strong>The stacked comparison stopped responding to the mouse after you unticked every lap.</strong> Ticking laps again brought the charts back, but hovering no longer moved the cursor line, the map dot or the table of values until you reloaded the page. It now keeps working however you change the selection.</li></ul>
