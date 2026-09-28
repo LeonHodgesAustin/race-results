@@ -39,6 +39,10 @@
 <h1>Changelog</h1>
 <p>All notable changes to racetelemetry are recorded here, newest first. This file is written for anyone browsing a published dashboard — not just developers — so entries describe what changed for you as a viewer or driver, in plain language.</p>
 <h2>[Unreleased]</h2>
+<h2>[1.5.2] - 2026-09-27</h2>
+<h3>Fixed</h3>
+<ul><li><strong>The stacked comparison stopped responding to the mouse after you unticked every lap.</strong> Ticking laps again brought the charts back, but hovering no longer moved the cursor line, the map dot or the table of values until you reloaded the page. It now keeps working however you change the selection.</li></ul>
+<ul><li><strong>The stacked comparison&#x27;s cursor line now sits exactly under the mouse.</strong> It used to jump to the nearest recorded data point, which could land a little to the left or right of the pointer (sometimes tens of metres off), so the values in the table didn&#x27;t quite match where you were pointing.</li></ul>
 <h2>[1.5.1] - 2026-09-27</h2>
 <h3>Fixed</h3>
 <ul><li><strong>Building the dashboards could crash on a session that had its GPS drift corrected</strong> (`correct-drift`), with &quot;Cannot interpolate with str dtype&quot;, on newer installs of the pandas library. The page now builds normally and still shows the Corrected trace for every lap.</li></ul>
