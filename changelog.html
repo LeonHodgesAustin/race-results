@@ -39,6 +39,12 @@
 <h1>Changelog</h1>
 <p>All notable changes to racetelemetry are recorded here, newest first. This file is written for anyone browsing a published dashboard — not just developers — so entries describe what changed for you as a viewer or driver, in plain language.</p>
 <h2>[Unreleased]</h2>
+<h2>[1.7.0] - 2026-09-28</h2>
+<h3>Added</h3>
+<ul><li><strong>Every selected lap now gets its own dot on the map</strong> while you point at the stacked comparison. The fastest selected lap (REF) sits exactly where you&#x27;re pointing. Each other lap&#x27;s dot shows where that lap was at the same moment into the lap, so the space between the dots is the time gap, the same way Replay&#x27;s ghost cars work.</li></ul>
+<ul><li><strong>Pin a spot on the stacked comparison.</strong> Click the chart and the cursor, the table and the map dots stay put, so you can scroll to the map (or study it) without losing your place. The cursor line turns blue while pinned. Use the left and right arrow keys to nudge it 5 m (hold Shift for 50 m), and click the chart again or press Esc to let go.</li></ul>
+<h3>Fixed</h3>
+<ul><li><strong>The map dot no longer jumps around.</strong> It used to snap to the nearest raw GPS reading rather than following the line drawn on the map. At Watkins Glen, where the raw GPS has occasional glitches, that could throw it hundreds of metres off the track. It now glides along the drawn line, and the dots from the Speed and Delta charts do too.</li></ul>
 <h2>[1.6.0] - 2026-09-28</h2>
 <h3>Changed</h3>
 <ul><li><strong>On a phone or tablet, dragging a finger along a chart now reads it instead of zooming.</strong> It used to start drawing a zoom box. Now it moves the cursor line and shows every lap&#x27;s values at that point, the same as moving the mouse on a computer. It works on the Stack, Speed, G-Force and Delta charts. Swiping up or down still scrolls the page. To zoom on a phone, tap a corner in the &quot;Where time is lost&quot; or Stats table, and use the new <strong>Reset zoom</strong> button to get back to the whole lap.</li></ul>
