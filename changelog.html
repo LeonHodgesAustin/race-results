@@ -39,6 +39,9 @@
 <h1>Changelog</h1>
 <p>All notable changes to racetelemetry are recorded here, newest first. This file is written for anyone browsing a published dashboard — not just developers — so entries describe what changed for you as a viewer or driver, in plain language.</p>
 <h2>[Unreleased]</h2>
+<h2>[1.10.2] - 2026-09-29</h2>
+<h3>Fixed</h3>
+<ul><li><strong>Corner names no longer sit on top of the distance numbers.</strong> They now go in their own row below the tick labels, and names that would run into each other (e.g. Heel (a)/(b)) drop into a second or third row. The chart grows a little at the bottom to fit them.</li><li><strong>The G charts are smooth instead of jagged.</strong> The accelerometer reads in bursts at ~27 Hz and picks up engine and road vibration; thinning that for the page kept a random vibration sample every third of a second, which drew as a spiky, low-resolution line. G is now low-pass filtered (3 Hz, zero-phase, so peaks stay where they happened) before thinning, and the G trace is kept at 10 samples a second or more even on the track page.</li></ul>
 <h2>[1.10.1] - 2026-09-28</h2>
 <h3>Fixed</h3>
 <ul><li><strong>The Delta chart now shows the real gap between laps.</strong> It used to measure &quot;how far into the lap&quot; by adding up the gaps between GPS positions. Each position wobbles by about a metre, which put a regular ripple into the line, and every lap&#x27;s GPS path comes out a slightly different length, so the line slowly slid away from the truth. On one Watkins Glen pair it was almost half a second off at one corner and ended the lap with the wrong lap ahead. Distance now comes from the car&#x27;s GPS speed, and every lap is lined up with the reference lap at each corner and sector gate and at the finish. The line is smooth, and at every gate and at the finish it now matches the times in the tables exactly. The stacked comparison&#x27;s delta panel and the Gap column get the same fix.</li></ul>
