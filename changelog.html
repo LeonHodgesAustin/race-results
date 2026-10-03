@@ -39,6 +39,10 @@
 <h1>Changelog</h1>
 <p>All notable changes to racetelemetry are recorded here, newest first. This file is written for anyone browsing a published dashboard — not just developers — so entries describe what changed for you as a viewer or driver, in plain language.</p>
 <h2>[Unreleased]</h2>
+<h2>[1.16.0] - 2026-10-03</h2>
+<h3>Added</h3>
+<ul><li><strong>Car potential: how much of your lap time is the car and conditions, and how much is the driving.</strong> Each session&#x27;s laps show what the car could do that day: how hard it cornered, braked and accelerated. A simulation then drives a model car round the track at exactly those limits, hills included (from USGS lidar). The result is the lap the car could have done.</li><li>The dashboard shows it as a <strong>Car potential</strong> chip.</li><li>A <strong>Car</strong> column in the stats table gives the car&#x27;s time for the lap and for every corner and straight, next to how far your best lap is from it.</li><li>On the track page, each session&#x27;s own potential sits beside its heading, so you can see the car and track get quicker (or slower) through a weekend, separately from the driving.</li></ul>
+<p>At Watkins Glen the car&#x27;s potential across all sessions was 2:07.84. The race winner that weekend ran 2:07.63. The new `racetelemetry lapsim` command prints the same breakdown in the terminal. How it works, and how far to trust it: docs/lapsim.md.</p>
 <h2>[1.15.1] - 2026-10-03</h2>
 <h3>Fixed</h3>
 <ul><li><strong>The home page&#x27;s track headings now update when the site is republished.</strong> Each track&#x27;s heading and its dashboard link were kept exactly as they were first published, so the 1.11.2 change that names each link after its track (&quot;Watkins Glen International dashboard →&quot; instead of &quot;Track dashboard →&quot;) never showed up for tracks already on the site.</li></ul>
