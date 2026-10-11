@@ -3,43 +3,184 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Race Telemetry — Session Archive</title>
+<title>Session archive · racetelemetry</title>
+<script>(function(){try{var t=localStorage.getItem('racetelemetry.theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <style>
-  :root {
-    --bg-900:#0f172a; --bg-800:#1e293b; --bg-700:#334155;
-    --text:#e2e8f0; --text-dim:#94a3b8; --accent:#38bdf8;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin:0; background:var(--bg-900); color:var(--text); padding:24px 20px 48px;
-    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  }
-  h1 { font-size:22px; margin:0 0 4px; }
-  .sub { color:var(--text-dim); font-size:13px; margin-bottom:24px; }
-  section.track {
-    background:var(--bg-800); border:1px solid var(--bg-700); border-radius:10px;
-    padding:16px 18px; margin-bottom:18px; max-width:900px;
-  }
-  section.track h2 { margin:0 0 12px; font-size:16px; overflow:auto; }
-  .track-link { float:right; color:var(--accent); font-size:13px; text-decoration:none; }
-  .track-link:hover { text-decoration:underline; }
-  table { border-collapse:collapse; width:100%; font-size:13px; }
-  th, td { padding:6px 10px; border-bottom:1px solid var(--bg-700); text-align:left; }
-  a { color:var(--accent); text-decoration:none; }
-  a:hover { text-decoration:underline; }
-  .empty { color:var(--text-dim); }
-  .whatsnew {
-    display:inline-block; margin-bottom:20px; padding:8px 14px;
-    background:var(--bg-800); border:1px solid var(--accent); border-radius:8px;
-    color:var(--accent); font-size:13px; font-weight:600; text-decoration:none;
-  }
-  .whatsnew:hover { background:var(--bg-700); text-decoration:none; }
+@font-face { font-family: 'Geist'; font-style: normal; font-weight: 100 900; font-display: swap;
+    src: url('vendor/geist-5.3.0/geist-latin-wght-normal.woff2') format('woff2'), url('https://cdn.jsdelivr.net/npm/@fontsource-variable/geist@5.3.0/files/geist-latin-wght-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Geist Mono'; font-style: normal; font-weight: 100 900; font-display: swap;
+    src: url('vendor/geist-5.3.0/geist-mono-latin-wght-normal.woff2') format('woff2'), url('https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono@5.3.0/files/geist-mono-latin-wght-normal.woff2') format('woff2'); }
+:root {
+    --bg:#F6F7F9; --surface:#FFFFFF; --subtle:#EEF0F3; --border:#E3E6EB; --border-strong:#D3D8DF;
+    --text:#14171C; --text-2:#5A6270; --text-3:#3A414C;
+    --accent:#2152D0; --accent-hover:#163C9E; --accent-soft:#E8EEFC; --on-accent:#FFFFFF;
+    --purple:#6D35C9; --purple-soft:#F1EBFC;
+    --green:#17804A; --green-soft:#E3F4EA;
+    --yellow:#A87A00; --yellow-soft:#FFF4D6; --warn:#8A5A00;
+    --red:#C2342B; --red-soft:#FDECEA;
+    --chart-bg:#FFFFFF; --chart-grid:#E6E9EE; --chart-zero:#B4BCC8; --chart-cursor:#14171C;
+    --seg-on:#FFFFFF; --seg-on-shadow:0 1px 2px rgba(20,23,28,.14);
+    --shadow-pop:0 12px 32px rgba(20,23,28,.18);
+    --scrim:rgba(20,23,28,.45);
+    color-scheme: light;
+    --font-sans:'Geist', -apple-system, 'Segoe UI', system-ui, sans-serif; --font-mono:'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    --r-control:6px; --r-card:10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg:#0E1116; --surface:#161A21; --subtle:#1E242D; --border:#262C36; --border-strong:#343C48;
+    --text:#E7EAEE; --text-2:#9AA3B0; --text-3:#C3CAD3;
+    --accent:#7FA6FF; --accent-hover:#A9C3FF; --accent-soft:#1E2A44; --on-accent:#0E1116;
+    --purple:#B490F5; --purple-soft:#2A2140;
+    --green:#4FD08A; --green-soft:#15301F;
+    --yellow:#E8C04A; --yellow-soft:#33290F; --warn:#E8C04A;
+    --red:#FF8A80; --red-soft:#3A1C1C;
+    --chart-bg:#161A21; --chart-grid:#262C36; --chart-zero:#4A5361; --chart-cursor:#E7EAEE;
+    --seg-on:#2A313C; --seg-on-shadow:none;
+    --shadow-pop:0 12px 32px rgba(0,0,0,.55);
+    --scrim:rgba(0,0,0,.65);
+    color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+    --bg:#0E1116; --surface:#161A21; --subtle:#1E242D; --border:#262C36; --border-strong:#343C48;
+    --text:#E7EAEE; --text-2:#9AA3B0; --text-3:#C3CAD3;
+    --accent:#7FA6FF; --accent-hover:#A9C3FF; --accent-soft:#1E2A44; --on-accent:#0E1116;
+    --purple:#B490F5; --purple-soft:#2A2140;
+    --green:#4FD08A; --green-soft:#15301F;
+    --yellow:#E8C04A; --yellow-soft:#33290F; --warn:#E8C04A;
+    --red:#FF8A80; --red-soft:#3A1C1C;
+    --chart-bg:#161A21; --chart-grid:#262C36; --chart-zero:#4A5361; --chart-cursor:#E7EAEE;
+    --seg-on:#2A313C; --seg-on-shadow:none;
+    --shadow-pop:0 12px 32px rgba(0,0,0,.55);
+    --scrim:rgba(0,0,0,.65);
+    color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: var(--font-sans); font-size: 14px; line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-hover); text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.appbar { background: var(--surface); border-bottom: 1px solid var(--border); }
+.appbar-inner {
+  max-width: var(--page-max, 1040px); margin: 0 auto; padding: 0 24px; min-height: 56px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.crumbs { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; }
+.crumbs .sep { color: var(--text-2); opacity: .7; }
+.crumbs .here { color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; }
+.brand:hover { color: var(--text); text-decoration: none; }
+.brand .brand-mark { color: var(--accent); flex: none; }
+.appbar-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.ver-chip {
+  font-family: var(--font-mono); font-size: 12px; color: var(--text-2); background: var(--subtle);
+  border-radius: 999px; padding: 3px 10px; white-space: nowrap;
+}
+a.ver-chip:hover { color: var(--text); text-decoration: none; }
+.icon-btn {
+  width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-3);
+  border-radius: var(--r-control); cursor: pointer; padding: 0; flex: none;
+}
+.icon-btn:hover { background: var(--subtle); color: var(--text); }
+.theme-toggle .icon-sun { display: none; }
+:root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+:root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-toggle .icon-sun { display: block; }
+  :root:not([data-theme="light"]) .theme-toggle .icon-moon { display: none; }
+}
+.tag {
+  display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; line-height: 1.5;
+  border-radius: 999px; padding: 0 7px; white-space: nowrap;
+}
+.tag-best { color: var(--purple); background: var(--purple-soft); }
+.tag-warn { color: var(--warn); background: var(--yellow-soft); font-weight: 500; }
+.tag-muted { color: var(--text-2); background: var(--subtle); font-weight: 500; }
+.tag-accent { color: var(--accent); background: var(--accent-soft); }
+.tag-added { color: var(--green); background: var(--green-soft); }
+.tag-changed { color: var(--accent); background: var(--accent-soft); }
+.tag-fixed { color: var(--warn); background: var(--yellow-soft); }
+.tag-removed { color: var(--red); background: var(--red-soft); }
+@media (max-width: 600px) { .appbar-inner { padding: 0 16px; } }
+
+:root { --page-max: 1040px; }
+.page { max-width: var(--page-max); margin: 0 auto; padding: 48px 24px 64px; display: flex; flex-direction: column; gap: 32px; }
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.page-head h1 { margin: 0 0 8px; font-size: 32px; line-height: 1.15; font-weight: 600; letter-spacing: -0.02em; }
+.lede { margin: 0; font-size: 15px; color: var(--text-2); max-width: 60ch; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
+.card-head { padding: 20px 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); }
+.card-head h2 { margin: 0 0 4px; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.card-head .meta { margin: 0; font-size: 13px; color: var(--text-2); }
+.card-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; }
+.stat { display: flex; flex-direction: column; gap: 2px; }
+.stat .k { font-size: 12px; color: var(--text-2); }
+.stat .v { font-family: var(--font-mono); font-size: 17px; font-weight: 500; }
+.v-best { color: var(--purple); }
+.v-car { color: var(--accent); }
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px; border-radius: var(--r-control);
+  background: var(--accent); color: var(--on-accent); font-size: 14px; font-weight: 500; white-space: nowrap;
+}
+.btn-primary:hover { background: var(--accent-hover); color: var(--on-accent); text-decoration: none; }
+.table-wrap { overflow-x: auto; }
+table.sessions { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
+table.sessions th { padding: 10px 12px; font-size: 12px; font-weight: 500; color: var(--text-2); text-align: left; }
+table.sessions td { padding: 12px; border-top: 1px solid var(--border); }
+table.sessions th:first-child, table.sessions td:first-child { padding-left: 24px; }
+table.sessions th:last-child, table.sessions td:last-child { padding-right: 24px; }
+table.sessions .r { text-align: right; }
+table.sessions .day { font-weight: 500; }
+table.sessions .ord { color: var(--text-2); }
+td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+td.laps { color: var(--text-3); }
+td.best { font-weight: 500; }
+th.gapcol { width: 40%; }
+.gapcell { display: flex; align-items: center; gap: 12px; }
+.bar { flex: 1; height: 6px; border-radius: 3px; background: var(--subtle); overflow: hidden; }
+.bar span { display: block; height: 100%; border-radius: 3px; background: var(--border-strong); }
+.gap { font-size: 13px; min-width: 112px; text-align: right; color: var(--text-2); font-family: var(--font-sans); }
+.gap.is-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.gap.is-best { color: var(--purple); font-weight: 500; }
+/* A track card published by an older version (from a machine that holds
+   that track's data -- scripts/publish_to_pages.py keeps another machine's
+   cards as they are): the pre-1.18 markup, drawn as a card like the rest. */
+section.track:not(.card) { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); padding: 20px 24px; overflow-x: auto; }
+section.track:not(.card) h2 { margin: 0 0 12px; font-size: 20px; font-weight: 600; letter-spacing: -0.01em;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+section.track:not(.card) .track-link { font-size: 14px; font-weight: 500; letter-spacing: 0; }
+section.track:not(.card) table { width: 100%; border-collapse: collapse; font-size: 14px; }
+section.track:not(.card) th { text-align: left; font-size: 12px; font-weight: 500; color: var(--text-2); padding: 8px 12px 8px 0; }
+section.track:not(.card) td { padding: 10px 12px 10px 0; border-top: 1px solid var(--border); }
+section.track:not(.card) td + td { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.empty { color: var(--text-2); background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--r-card); padding: 32px 24px; text-align: center; }
+footer.site-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--text-2); }
+@media (max-width: 600px) {
+  .page { padding: 32px 16px 48px; gap: 24px; }
+  .page-head h1 { font-size: 26px; }
+  .card-head { padding: 16px; }
+  .btn-primary { width: 100%; justify-content: center; }
+  table.sessions { min-width: 0; }
+  table.sessions th:first-child, table.sessions td:first-child { padding-left: 16px; }
+  table.sessions th:last-child, table.sessions td:last-child { padding-right: 16px; }
+  table.sessions .ord { display: block; }
+  th.gapcol { width: auto; }
+  .bar { display: none; }
+  .gap { min-width: 0; }
+}
 </style>
 </head>
 <body>
-<h1>Race Telemetry — Session Archive</h1>
-<div class="sub">Generated 2026-10-03 14:02:16 &middot; racetelemetry v1.16.0</div>
-<a class="whatsnew" href="changelog.html">What's new — v1.16.0 →</a>
+<header class="appbar"><div class="appbar-inner"><nav class="crumbs" aria-label="Breadcrumb"><a class="brand" href="index.html"><svg class="brand-mark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2.5 2.5"></path><path d="M10 2h4"></path></svg>racetelemetry</a></nav><div class="appbar-actions"><a class="ver-chip" href="changelog.html" title="What's new in this version">v1.18.1</a><button type="button" class="icon-btn theme-toggle" data-theme-toggle aria-label="Switch theme"><svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg><svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></button></div></div></header>
+<main class="page">
+<div class="page-head"><div><h1>Session archive</h1><p class="lede">Open a track to compare every lap recorded there, or a session for one day's running. <a href="changelog.html">What's new in v1.18.1</a></p></div></div>
 <section class="track">
   <h2>NJMP – Lightning<a class="track-link" href="njmp_lightning/index.html">Track dashboard →</a></h2>
   <table>
@@ -51,18 +192,45 @@
     </tbody>
   </table>
 </section>
-<section class="track">
-  <h2>Watkins Glen International<a class="track-link" href="watkins_glen/index.html">Watkins Glen International dashboard →</a></h2>
-  <table>
-    <thead><tr><th>Session</th><th>Laps</th><th>Best lap</th></tr></thead>
-    <tbody>
-      <tr><td><a href="watkins_glen/bdf895cf.html">Watkins Glen International · 2026-09-25 · S1</a></td><td>4</td><td>2:13.081</td></tr>
-          <tr><td><a href="watkins_glen/2cf1c3fa.html">Watkins Glen International · 2026-09-25 · S2</a></td><td>6</td><td>2:12.426</td></tr>
-          <tr><td><a href="watkins_glen/9184fadb.html">Watkins Glen International · 2026-09-25 · S3</a></td><td>9</td><td>2:12.507</td></tr>
-          <tr><td><a href="watkins_glen/fe4efb3e.html">Watkins Glen International · 2026-09-26 · S1</a></td><td>2</td><td>—</td></tr>
-    </tbody>
-  </table>
-</section>
-
+<section class="card track" data-track="watkins_glen" aria-labelledby="t-watkins_glen"><header class="card-head"><div><h2 id="t-watkins_glen">Watkins Glen International</h2><p class="meta">Fri 25 – Sat 26 Sep 2026 · 4 sessions · 21 laps</p></div><div class="card-stats"><div class="stat"><span class="k">Best lap</span><span class="v v-best">2:12.426</span></div><div class="stat" title="The lap the car could have done, from the limits its own laps showed (lap simulation, every session pooled)"><span class="k">Car potential</span><span class="v v-car">2:07.836</span></div><a class="btn-primary" href="watkins_glen/index.html">Open track dashboard <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg></a></div></header><div class="table-wrap"><table class="sessions"><thead><tr><th scope="col">Session</th><th scope="col" class="r">Laps</th><th scope="col" class="r">Best lap</th><th scope="col" class="gapcol">Gap to best</th></tr></thead><tbody><tr><td><a class="day" href="watkins_glen/bdf895cf.html">Fri 25 Sep</a> <span class="ord"><span aria-hidden="true">· </span>Session 1</span></td><td class="num laps r">4</td><td class="num best r">2:13.081</td><td><div class="gapcell"><div class="bar" aria-hidden="true"><span style="width:100%"></span></div><span class="gap is-num">+0.655</span></div></td></tr><tr><td><a class="day" href="watkins_glen/2cf1c3fa.html">Fri 25 Sep</a> <span class="ord"><span aria-hidden="true">· </span>Session 2</span></td><td class="num laps r">6</td><td class="num best r">2:12.426</td><td><div class="gapcell"><div class="bar" aria-hidden="true"><span style="width:0%"></span></div><span class="gap is-best">Track best</span></div></td></tr><tr><td><a class="day" href="watkins_glen/9184fadb.html">Fri 25 Sep</a> <span class="ord"><span aria-hidden="true">· </span>Session 3</span></td><td class="num laps r">9</td><td class="num best r">2:12.507</td><td><div class="gapcell"><div class="bar" aria-hidden="true"><span style="width:12%"></span></div><span class="gap is-num">+0.081</span></div></td></tr><tr><td><a class="day" href="watkins_glen/fe4efb3e.html">Sat 26 Sep</a> <span class="ord"><span aria-hidden="true">· </span>Session 1</span></td><td class="num laps r">2</td><td class="num best r">—</td><td><div class="gapcell"><div class="bar" aria-hidden="true"><span style="width:0%"></span></div><span class="gap">No trusted laps</span></div></td></tr></tbody></table></div></section>
+<footer class="site-foot"><span>Updated 2026-10-11 17:22 · racetelemetry v1.18.1</span><span>Best laps leave out laps flagged by hand or with 3 s or more of GPS dropout.</span></footer>
+</main>
+<script>
+(function () {
+  var KEY = 'racetelemetry.theme';
+  var root = document.documentElement;
+  function current() {
+    var t = root.getAttribute('data-theme');
+    if (t === 'light' || t === 'dark') return t;
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  function sync() {
+    var dark = current() === 'dark';
+    document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
+      b.setAttribute('aria-pressed', dark ? 'true' : 'false');
+      b.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+      b.title = dark ? 'Switch to light theme' : 'Switch to dark theme';
+    });
+  }
+  document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var next = current() === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem(KEY, next); } catch (e) {}
+      sync();
+      document.dispatchEvent(new CustomEvent('rt-themechange', { detail: { theme: next } }));
+    });
+  });
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var onChange = function () {
+      sync();
+      if (!root.getAttribute('data-theme')) document.dispatchEvent(new CustomEvent('rt-themechange', { detail: { theme: current() } }));
+    };
+    if (mq.addEventListener) mq.addEventListener('change', onChange); else if (mq.addListener) mq.addListener(onChange);
+  }
+  sync();
+})();
+</script>
 </body>
 </html>
