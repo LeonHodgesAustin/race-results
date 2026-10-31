@@ -11,46 +11,49 @@
 @font-face { font-family: 'Geist Mono'; font-style: normal; font-weight: 100 900; font-display: swap;
     src: url('vendor/geist-5.3.0/geist-mono-latin-wght-normal.woff2') format('woff2'), url('https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono@5.3.0/files/geist-mono-latin-wght-normal.woff2') format('woff2'); }
 :root {
-    --bg:#F6F7F9; --surface:#FFFFFF; --subtle:#EEF0F3; --border:#E3E6EB; --border-strong:#D3D8DF;
-    --text:#14171C; --text-2:#5A6270; --text-3:#3A414C;
-    --accent:#2152D0; --accent-hover:#163C9E; --accent-soft:#E8EEFC; --on-accent:#FFFFFF;
-    --purple:#6D35C9; --purple-soft:#F1EBFC;
-    --green:#17804A; --green-soft:#E3F4EA;
-    --yellow:#A87A00; --yellow-soft:#FFF4D6; --warn:#8A5A00;
-    --red:#C2342B; --red-soft:#FDECEA;
-    --chart-bg:#FFFFFF; --chart-grid:#E6E9EE; --chart-zero:#B4BCC8; --chart-cursor:#14171C;
-    --seg-on:#FFFFFF; --seg-on-shadow:0 1px 2px rgba(20,23,28,.14);
-    --shadow-pop:0 12px 32px rgba(20,23,28,.18);
-    --scrim:rgba(20,23,28,.45);
+    --bg:#F1F2EC; --surface:#FBFBF6; --subtle:#E6E8DF; --border:#C9CDC2; --border-strong:#AEB4A6;
+    --text:#1B2420; --text-2:#5B6760; --text-3:#38433D;
+    --accent:#2D8B82; --accent-hover:#206B64; --accent-soft:#DCEFEC; --on-accent:#FFFFFF;
+    --purple:#7A4FC4; --purple-soft:#EDE4FA;
+    --green:#2E8457; --green-soft:#E1F0E6;
+    --yellow:#9C6A14; --yellow-soft:#F6E8CC; --warn:#8A5A14;
+    --red:#A23B2E; --red-soft:#F5DFDA;
+    --chart-bg:#FBFBF6; --chart-grid:#DDE0D5; --chart-zero:#AEB4A6; --chart-cursor:#1B2420;
+    --seg-on:#FFFFFF; --seg-on-shadow:0 1px 2px rgba(27,36,32,.18);
+    --digit-on:#1B2420; --digit-off:rgba(27,36,32,.12);
+    --shadow-pop:0 10px 28px rgba(27,36,32,.20), 0 0 0 1px rgba(27,36,32,.06);
+    --scrim:rgba(27,36,32,.45);
     color-scheme: light;
     --font-sans:'Geist', -apple-system, 'Segoe UI', system-ui, sans-serif; --font-mono:'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-    --r-control:6px; --r-card:10px;
+    --r-control:4px; --r-card:4px;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-    --bg:#0E1116; --surface:#161A21; --subtle:#1E242D; --border:#262C36; --border-strong:#343C48;
-    --text:#E7EAEE; --text-2:#9AA3B0; --text-3:#C3CAD3;
-    --accent:#7FA6FF; --accent-hover:#A9C3FF; --accent-soft:#1E2A44; --on-accent:#0E1116;
-    --purple:#B490F5; --purple-soft:#2A2140;
-    --green:#4FD08A; --green-soft:#15301F;
-    --yellow:#E8C04A; --yellow-soft:#33290F; --warn:#E8C04A;
-    --red:#FF8A80; --red-soft:#3A1C1C;
-    --chart-bg:#161A21; --chart-grid:#262C36; --chart-zero:#4A5361; --chart-cursor:#E7EAEE;
-    --seg-on:#2A313C; --seg-on-shadow:none;
-    --shadow-pop:0 12px 32px rgba(0,0,0,.55);
+    --bg:#17221F; --surface:#1C2825; --subtle:#202D29; --border:#2B3733; --border-strong:#3B4943;
+    --text:#EDE8DA; --text-2:#8EA098; --text-3:#C9CFC0;
+    --accent:#4FB8AE; --accent-hover:#79CCC3; --accent-soft:#1C3330; --on-accent:#0B1412;
+    --purple:#B08CE8; --purple-soft:#241B36;
+    --green:#6FBF8E; --green-soft:#17281D;
+    --yellow:#E3A542; --yellow-soft:#332508; --warn:#E3A542;
+    --red:#D9776A; --red-soft:#2E1714;
+    --chart-bg:#1C2825; --chart-grid:#2B3733; --chart-zero:#3B4943; --chart-cursor:#EDE8DA;
+    --seg-on:#2A3733; --seg-on-shadow:none;
+    --digit-on:#E3A542; --digit-off:rgba(237,232,218,.08);
+    --shadow-pop:0 14px 34px rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.4);
     --scrim:rgba(0,0,0,.65);
     color-scheme: dark;
 } }
 :root[data-theme="dark"] {
-    --bg:#0E1116; --surface:#161A21; --subtle:#1E242D; --border:#262C36; --border-strong:#343C48;
-    --text:#E7EAEE; --text-2:#9AA3B0; --text-3:#C3CAD3;
-    --accent:#7FA6FF; --accent-hover:#A9C3FF; --accent-soft:#1E2A44; --on-accent:#0E1116;
-    --purple:#B490F5; --purple-soft:#2A2140;
-    --green:#4FD08A; --green-soft:#15301F;
-    --yellow:#E8C04A; --yellow-soft:#33290F; --warn:#E8C04A;
-    --red:#FF8A80; --red-soft:#3A1C1C;
-    --chart-bg:#161A21; --chart-grid:#262C36; --chart-zero:#4A5361; --chart-cursor:#E7EAEE;
-    --seg-on:#2A313C; --seg-on-shadow:none;
-    --shadow-pop:0 12px 32px rgba(0,0,0,.55);
+    --bg:#17221F; --surface:#1C2825; --subtle:#202D29; --border:#2B3733; --border-strong:#3B4943;
+    --text:#EDE8DA; --text-2:#8EA098; --text-3:#C9CFC0;
+    --accent:#4FB8AE; --accent-hover:#79CCC3; --accent-soft:#1C3330; --on-accent:#0B1412;
+    --purple:#B08CE8; --purple-soft:#241B36;
+    --green:#6FBF8E; --green-soft:#17281D;
+    --yellow:#E3A542; --yellow-soft:#332508; --warn:#E3A542;
+    --red:#D9776A; --red-soft:#2E1714;
+    --chart-bg:#1C2825; --chart-grid:#2B3733; --chart-zero:#3B4943; --chart-cursor:#EDE8DA;
+    --seg-on:#2A3733; --seg-on-shadow:none;
+    --digit-on:#E3A542; --digit-off:rgba(237,232,218,.08);
+    --shadow-pop:0 14px 34px rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.4);
     --scrim:rgba(0,0,0,.65);
     color-scheme: dark;
 }
@@ -78,6 +81,11 @@ a:hover { color: var(--accent-hover); text-decoration: underline; }
 .brand:hover { color: var(--text); text-decoration: none; }
 .brand .brand-mark { color: var(--accent); flex: none; }
 .appbar-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.appbar-nav-link {
+  font-size: 13px; font-weight: 600; color: var(--text-2); text-decoration: none;
+  padding: 0 4px; white-space: nowrap;
+}
+.appbar-nav-link:hover { color: var(--text); text-decoration: none; }
 .ver-chip {
   font-family: var(--font-mono); font-size: 12px; color: var(--text-2); background: var(--subtle);
   border-radius: 999px; padding: 3px 10px; white-space: nowrap;
@@ -151,8 +159,10 @@ article.release code { font-family: var(--font-mono); font-size: 0.9em; backgrou
 <nav class="rail" aria-label="Versions"><span class="rail-h">Versions</span><a href="#vUnreleased"><span class="v">Unreleased</span><span class="d"></span></a><a href="#v1.22.0" class="is-latest"><span class="v">1.22.0</span><span class="d">27 Oct 2026</span></a><a href="#v1.21.0"><span class="v">1.21.0</span><span class="d">26 Oct 2026</span></a><a href="#v1.20.0"><span class="v">1.20.0</span><span class="d">24 Oct 2026</span></a><a href="#v1.19.1"><span class="v">1.19.1</span><span class="d">11 Oct 2026</span></a><a href="#v1.19.0"><span class="v">1.19.0</span><span class="d">11 Oct 2026</span></a><a href="#v1.18.1"><span class="v">1.18.1</span><span class="d">11 Oct 2026</span></a><a href="#v1.18.0"><span class="v">1.18.0</span><span class="d">11 Oct 2026</span></a><a href="#v1.17.0"><span class="v">1.17.0</span><span class="d">9 Oct 2026</span></a><a href="#v1.16.0"><span class="v">1.16.0</span><span class="d">3 Oct 2026</span></a><a href="#v1.15.1"><span class="v">1.15.1</span><span class="d">3 Oct 2026</span></a><a href="#v1.15.0"><span class="v">1.15.0</span><span class="d">2 Oct 2026</span></a><a href="#v1.14.0"><span class="v">1.14.0</span><span class="d">2 Oct 2026</span></a><a href="#v1.13.0"><span class="v">1.13.0</span><span class="d">2 Oct 2026</span></a><a href="#v1.12.0"><span class="v">1.12.0</span><span class="d">2 Oct 2026</span></a><a href="#v1.11.2"><span class="v">1.11.2</span><span class="d">2 Oct 2026</span></a><a href="#v1.11.1"><span class="v">1.11.1</span><span class="d">29 Sep 2026</span></a><a href="#v1.11.0"><span class="v">1.11.0</span><span class="d">29 Sep 2026</span></a><a href="#v1.10.2"><span class="v">1.10.2</span><span class="d">29 Sep 2026</span></a><a href="#v1.10.1"><span class="v">1.10.1</span><span class="d">28 Sep 2026</span></a><a href="#v1.10.0"><span class="v">1.10.0</span><span class="d">28 Sep 2026</span></a><a href="#v1.9.0"><span class="v">1.9.0</span><span class="d">28 Sep 2026</span></a><a href="#v1.8.0"><span class="v">1.8.0</span><span class="d">28 Sep 2026</span></a><a href="#v1.7.0"><span class="v">1.7.0</span><span class="d">28 Sep 2026</span></a><a href="#v1.6.0"><span class="v">1.6.0</span><span class="d">28 Sep 2026</span></a><a href="#v1.5.2"><span class="v">1.5.2</span><span class="d">27 Sep 2026</span></a><a href="#v1.5.1"><span class="v">1.5.1</span><span class="d">27 Sep 2026</span></a><a href="#v1.5.0"><span class="v">1.5.0</span><span class="d">27 Sep 2026</span></a><a href="#v1.4.0"><span class="v">1.4.0</span><span class="d">25 Jul 2026</span></a><a href="#v1.3.0"><span class="v">1.3.0</span><span class="d">24 Jul 2026</span></a><a href="#v1.2.0"><span class="v">1.2.0</span><span class="d">21 Jul 2026</span></a><a href="#v1.1.0"><span class="v">1.1.0</span><span class="d">20 Jul 2026</span></a><a href="#v1.0.0"><span class="v">1.0.0</span><span class="d">20 Jul 2026</span></a></nav>
 <main class="log">
 <header><h1>What's new</h1><p>All notable changes to racetelemetry are recorded here, newest first. This file is written for anyone browsing a published dashboard — not just developers — so entries describe what changed for you as a viewer or driver, in plain language.</p></header>
-<article class="release" id="vUnreleased" aria-labelledby="vUnreleased-h"><div class="rel-head"><h2 id="vUnreleased-h">Unreleased</h2><span class="tag tag-muted">Not released yet</span></div><h3 class="cat"><span class="tag tag-changed">Changed</span></h3>
-<ul><li><strong>Gearing shown as speed per 100 RPM.</strong> The live RPM panel now shows how many mph the car is doing per 100 RPM right now, next to what each gear should give (speed = that number x RPM / 100), instead of RPM per mph. A clutch slipping or a gear mismatch shows up as the two not matching.</li></ul></article>
+<article class="release" id="vUnreleased" aria-labelledby="vUnreleased-h"><div class="rel-head"><h2 id="vUnreleased-h">Unreleased</h2><span class="tag tag-muted">Not released yet</span></div><h3 class="cat"><span class="tag tag-added">Added</span></h3>
+<ul><li><strong>Ghost car.</strong> Session and track pages now list the simulated lap as &quot;Ghost car&quot;. Tick it like any lap to race it in replay, overlay its speed and see the time gap against your lap, corner by corner. It drives your own line at the limits your laps showed, and it never counts as a best lap.</li><li><strong>A quick lap-chart page for every session.</strong> Opening a session now lands on Overview: the best lap as a timing-clock readout, every lap&#x27;s sector splits and gap to the best, and a glance at the fastest lap&#x27;s line and speed. The full map, lap comparison charts, corner stats and gate editor are still there, one click away on Analysis — nothing was removed, it&#x27;s just split across two pages instead of one long one.</li><li><strong>A &quot;Sensors on&quot; button for the live tools.</strong> With recording stopped, the status page and the Live tools page can now turn the sensors on without recording anything, so the live tools have something to show. It switches itself off after 30 minutes, Start recording takes over from it, and it&#x27;s never offered while a recording is running.</li><li><strong>One bookmark for the logger&#x27;s pages.</strong> The logger&#x27;s address changes whenever the phone&#x27;s hotspot restarts, so a bookmark to it stopped working. The Base Station now keeps <code>http://127.0.0.1:8090/logger/</code> (and <code>/logger/live.html</code>) pointing at wherever the logger is, so you can bookmark that once on the phone.</li></ul>
+<h3 class="cat"><span class="tag tag-changed">Changed</span></h3>
+<ul><li><strong>A new look for the dashboard and published site.</strong> The rounded cards and blue accent are gone, replaced by a trackside timing-ledger look: hairline rules instead of card shadows, a teal accent, and the same purple/green/ amber meanings (best of any lap / best of your selection / slower) carried over. Nothing about what the dashboard shows changed, only how it looks.</li><li><strong>Gearing shown as speed per 100 RPM.</strong> The live RPM panel now shows how many mph the car is doing per 100 RPM right now, next to what each gear should give (speed = that number x RPM / 100), instead of RPM per mph. A clutch slipping or a gear mismatch shows up as the two not matching.</li></ul></article>
 <article class="release" id="v1.22.0" aria-labelledby="v1.22.0-h"><div class="rel-head"><h2 id="v1.22.0-h">1.22.0</h2><span class="date">27 Oct 2026</span><span class="tag tag-accent">Latest</span></div><h3 class="cat"><span class="tag tag-added">Added</span></h3>
 <ul><li><strong>Live tools on the logger&#x27;s own web page.</strong> A new Live page shows, as it happens: engine RPM and gear from the vibration sensor, a force circle with both motion sensors drawn together (their dots blend where they agree and fade over a few seconds), a scrolling vibration spectrogram, and a short trace of where the car has been with the GPS error drawn as circles. Each tool switches on and off; with them all off the logger sends nothing extra.</li><li><strong>The logger&#x27;s status and settings pages were rebuilt</strong> as ordinary web pages talking to the logger, with no change to what they show. The confirmation before Stop, Shut down and the other controls is now a pop-up on the page; the logger still refuses them while the car is moving.</li></ul>
 <h3 class="cat"><span class="tag tag-fixed">Fixed</span></h3>
