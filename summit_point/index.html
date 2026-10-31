@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- rt-fingerprint: 60cf78aff3ca7937 -->
+<!-- rt-fingerprint: 15959292f52c1f5b -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -49,46 +49,49 @@
 @font-face { font-family: 'Geist Mono'; font-style: normal; font-weight: 100 900; font-display: swap;
     src: url('../vendor/geist-5.3.0/geist-mono-latin-wght-normal.woff2') format('woff2'), url('https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono@5.3.0/files/geist-mono-latin-wght-normal.woff2') format('woff2'); }
 :root {
-    --bg:#F6F7F9; --surface:#FFFFFF; --subtle:#EEF0F3; --border:#E3E6EB; --border-strong:#D3D8DF;
-    --text:#14171C; --text-2:#5A6270; --text-3:#3A414C;
-    --accent:#2152D0; --accent-hover:#163C9E; --accent-soft:#E8EEFC; --on-accent:#FFFFFF;
-    --purple:#6D35C9; --purple-soft:#F1EBFC;
-    --green:#17804A; --green-soft:#E3F4EA;
-    --yellow:#A87A00; --yellow-soft:#FFF4D6; --warn:#8A5A00;
-    --red:#C2342B; --red-soft:#FDECEA;
-    --chart-bg:#FFFFFF; --chart-grid:#E6E9EE; --chart-zero:#B4BCC8; --chart-cursor:#14171C;
-    --seg-on:#FFFFFF; --seg-on-shadow:0 1px 2px rgba(20,23,28,.14);
-    --shadow-pop:0 12px 32px rgba(20,23,28,.18);
-    --scrim:rgba(20,23,28,.45);
+    --bg:#F1F2EC; --surface:#FBFBF6; --subtle:#E6E8DF; --border:#C9CDC2; --border-strong:#AEB4A6;
+    --text:#1B2420; --text-2:#5B6760; --text-3:#38433D;
+    --accent:#2D8B82; --accent-hover:#206B64; --accent-soft:#DCEFEC; --on-accent:#FFFFFF;
+    --purple:#7A4FC4; --purple-soft:#EDE4FA;
+    --green:#2E8457; --green-soft:#E1F0E6;
+    --yellow:#9C6A14; --yellow-soft:#F6E8CC; --warn:#8A5A14;
+    --red:#A23B2E; --red-soft:#F5DFDA;
+    --chart-bg:#FBFBF6; --chart-grid:#DDE0D5; --chart-zero:#AEB4A6; --chart-cursor:#1B2420;
+    --seg-on:#FFFFFF; --seg-on-shadow:0 1px 2px rgba(27,36,32,.18);
+    --digit-on:#1B2420; --digit-off:rgba(27,36,32,.12);
+    --shadow-pop:0 10px 28px rgba(27,36,32,.20), 0 0 0 1px rgba(27,36,32,.06);
+    --scrim:rgba(27,36,32,.45);
     color-scheme: light;
     --font-sans:'Geist', -apple-system, 'Segoe UI', system-ui, sans-serif; --font-mono:'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-    --r-control:6px; --r-card:10px;
+    --r-control:4px; --r-card:4px;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-    --bg:#0E1116; --surface:#161A21; --subtle:#1E242D; --border:#262C36; --border-strong:#343C48;
-    --text:#E7EAEE; --text-2:#9AA3B0; --text-3:#C3CAD3;
-    --accent:#7FA6FF; --accent-hover:#A9C3FF; --accent-soft:#1E2A44; --on-accent:#0E1116;
-    --purple:#B490F5; --purple-soft:#2A2140;
-    --green:#4FD08A; --green-soft:#15301F;
-    --yellow:#E8C04A; --yellow-soft:#33290F; --warn:#E8C04A;
-    --red:#FF8A80; --red-soft:#3A1C1C;
-    --chart-bg:#161A21; --chart-grid:#262C36; --chart-zero:#4A5361; --chart-cursor:#E7EAEE;
-    --seg-on:#2A313C; --seg-on-shadow:none;
-    --shadow-pop:0 12px 32px rgba(0,0,0,.55);
+    --bg:#17221F; --surface:#1C2825; --subtle:#202D29; --border:#2B3733; --border-strong:#3B4943;
+    --text:#EDE8DA; --text-2:#8EA098; --text-3:#C9CFC0;
+    --accent:#4FB8AE; --accent-hover:#79CCC3; --accent-soft:#1C3330; --on-accent:#0B1412;
+    --purple:#B08CE8; --purple-soft:#241B36;
+    --green:#6FBF8E; --green-soft:#17281D;
+    --yellow:#E3A542; --yellow-soft:#332508; --warn:#E3A542;
+    --red:#D9776A; --red-soft:#2E1714;
+    --chart-bg:#1C2825; --chart-grid:#2B3733; --chart-zero:#3B4943; --chart-cursor:#EDE8DA;
+    --seg-on:#2A3733; --seg-on-shadow:none;
+    --digit-on:#E3A542; --digit-off:rgba(237,232,218,.08);
+    --shadow-pop:0 14px 34px rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.4);
     --scrim:rgba(0,0,0,.65);
     color-scheme: dark;
 } }
 :root[data-theme="dark"] {
-    --bg:#0E1116; --surface:#161A21; --subtle:#1E242D; --border:#262C36; --border-strong:#343C48;
-    --text:#E7EAEE; --text-2:#9AA3B0; --text-3:#C3CAD3;
-    --accent:#7FA6FF; --accent-hover:#A9C3FF; --accent-soft:#1E2A44; --on-accent:#0E1116;
-    --purple:#B490F5; --purple-soft:#2A2140;
-    --green:#4FD08A; --green-soft:#15301F;
-    --yellow:#E8C04A; --yellow-soft:#33290F; --warn:#E8C04A;
-    --red:#FF8A80; --red-soft:#3A1C1C;
-    --chart-bg:#161A21; --chart-grid:#262C36; --chart-zero:#4A5361; --chart-cursor:#E7EAEE;
-    --seg-on:#2A313C; --seg-on-shadow:none;
-    --shadow-pop:0 12px 32px rgba(0,0,0,.55);
+    --bg:#17221F; --surface:#1C2825; --subtle:#202D29; --border:#2B3733; --border-strong:#3B4943;
+    --text:#EDE8DA; --text-2:#8EA098; --text-3:#C9CFC0;
+    --accent:#4FB8AE; --accent-hover:#79CCC3; --accent-soft:#1C3330; --on-accent:#0B1412;
+    --purple:#B08CE8; --purple-soft:#241B36;
+    --green:#6FBF8E; --green-soft:#17281D;
+    --yellow:#E3A542; --yellow-soft:#332508; --warn:#E3A542;
+    --red:#D9776A; --red-soft:#2E1714;
+    --chart-bg:#1C2825; --chart-grid:#2B3733; --chart-zero:#3B4943; --chart-cursor:#EDE8DA;
+    --seg-on:#2A3733; --seg-on-shadow:none;
+    --digit-on:#E3A542; --digit-off:rgba(237,232,218,.08);
+    --shadow-pop:0 14px 34px rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.4);
     --scrim:rgba(0,0,0,.65);
     color-scheme: dark;
 }
@@ -116,6 +119,11 @@ a:hover { color: var(--accent-hover); text-decoration: underline; }
 .brand:hover { color: var(--text); text-decoration: none; }
 .brand .brand-mark { color: var(--accent); flex: none; }
 .appbar-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.appbar-nav-link {
+  font-size: 13px; font-weight: 600; color: var(--text-2); text-decoration: none;
+  padding: 0 4px; white-space: nowrap;
+}
+.appbar-nav-link:hover { color: var(--text); text-decoration: none; }
 .ver-chip {
   font-family: var(--font-mono); font-size: 12px; color: var(--text-2); background: var(--subtle);
   border-radius: 999px; padding: 3px 10px; white-space: nowrap;
@@ -305,7 +313,7 @@ a.ver-chip:hover { color: var(--text); text-decoration: none; }
   .sector-map-legend { background: var(--surface); color: var(--text); padding: 6px 10px; border-radius: var(--r-control);
     font-size: 12px; line-height: 1.5; border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
   .sector-map-legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 4px; }
-  .sector-map-label { background: #14171C; color: #F6F7F9; border: 1px solid #F6F7F9; font-weight: 700; font-size: 11px; padding: 0 4px; }
+  .sector-map-label { background: #1B2420; color: #F1F2EC; border: 1px solid #F1F2EC; font-weight: 700; font-size: 11px; padding: 0 4px; }
   .leaflet-container { font-family: var(--font-sans); }
 
   /* Replay, docked under the map inside the map card. */
@@ -608,6 +616,7 @@ a.ver-chip:hover { color: var(--text); text-decoration: none; }
       <span class="here" id="crumb-here" aria-current="page"></span>
     </nav>
     <div class="appbar-actions">
+      
       <span class="ver-chip" id="appbar-version"></span>
       <button type="button" class="icon-btn theme-toggle" data-theme-toggle aria-label="Switch theme"><svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg><svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></button>
     </div>
@@ -928,7 +937,7 @@ a.ver-chip:hover { color: var(--text); text-decoration: none; }
 function rtStartApp(L, Plotly) {
   "use strict";
   var DATA = JSON.parse(document.getElementById('dashboard-payload').textContent);
-  var RENDER_FINGERPRINT = "60cf78aff3ca7937";
+  var RENDER_FINGERPRINT = "15959292f52c1f5b";
 
   // ── payload axes/channels -> per-lap working arrays ────────────────────
   // Each lap arrives as named time `axes` plus `channels` that reference one
