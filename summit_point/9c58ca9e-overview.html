@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- rt-fingerprint: e80312f3827b3d4a -->
+<!-- rt-fingerprint: 924ba5c7d59a4e00 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -173,18 +173,38 @@ table.ledger tr.is-flagged { opacity: .6; }
 table.ledger td.s.best-split { color: var(--purple); font-weight: 600; }
 table.ledger td.time { font-weight: 600; }
 table.ledger .delta.slower { color: var(--warn); }
+.ledger-session-row td {
+  padding: 10px 14px 6px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-2);
+  letter-spacing: .02em; border-bottom: 1px solid var(--border); white-space: normal;
+}
+.ledger-session-row:not(:first-child) td { padding-top: 16px; }
+.ledger-session-row a { color: var(--accent); text-decoration: none; }
+.ledger-session-row a:hover { text-decoration: underline; }
 .ledger-foot { padding: 10px 14px; font-size: 12px; color: var(--text-2); }
 
 .rail-panel { border-bottom: 1px solid var(--border-strong); padding: 16px 18px; }
 .rail-panel:last-child { border-bottom: none; }
 .rail-title { font-size: 11px; color: var(--text-2); margin: 0 0 10px; letter-spacing: .02em; }
-.track-svg { width: 100%; height: auto; display: block; }
-.track-svg .trace { fill: none; stroke: var(--purple); stroke-width: 2.5; stroke-linecap: round; }
-.track-svg .sf { fill: var(--text-2); }
-.speed-trace { width: 100%; height: 86px; display: block; }
-.speed-trace .fill { fill: var(--accent); opacity: .14; }
-.speed-trace .line { fill: none; stroke: var(--accent); stroke-width: 1.75; }
-.rail-legend { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-2); margin-top: 6px; }
+.gap-chart { width: 100%; height: 90px; display: block; }
+.gap-chart .gap-bar { fill: var(--warn); cursor: pointer; }
+.gap-chart .gap-bar:hover { fill: var(--text); }
+.gap-chart .gap-bar-best { fill: var(--purple); }
+.gap-chart .gap-bar-excluded { fill: var(--border-strong); }
+.gap-chart .gap-bar.is-compared { stroke: var(--text); stroke-width: 1.5; }
+.gap-chart .gap-baseline { stroke: var(--border-strong); stroke-width: 1; }
+.gap-chart .gap-session-sep { stroke: var(--border); stroke-width: 1; }
+.speed-trace { width: 100%; height: 86px; display: block; overflow: visible; }
+.speed-trace .delta-zero { stroke: var(--border-strong); stroke-width: 1; }
+.speed-trace .delta-seg { fill: none; stroke-width: 2.25; stroke-linecap: round; }
+.speed-trace .delta-ahead { stroke: var(--green); fill: var(--green); }
+.speed-trace .delta-behind { stroke: var(--red); fill: var(--red); }
+.speed-trace .delta-end-label { font-size: 10px; font-weight: 600; font-family: var(--font-mono); }
+.speed-trace .sector-tick { stroke: var(--border-strong); stroke-width: 1; stroke-dasharray: 2 2; }
+.speed-trace .sector-tick-label { font-size: 8px; fill: var(--text-2); text-anchor: middle; }
+.rail-empty-svg { font-size: 11px; fill: var(--text-2); text-anchor: middle; }
+table.ledger tbody tr.lap-row { cursor: pointer; }
+table.ledger tr.is-compared, table.ledger tr.is-compared:hover { background: var(--accent-soft); }
+.rail-legend { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-2); margin-top: 6px; gap: 6px; }
 .rail-empty { font-size: 12px; color: var(--text-2); }
 
 .sector-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); border-top: 1px solid var(--border-strong); }
@@ -261,14 +281,12 @@ table.ledger .delta.slower { color: var(--warn); }
       </div>
       <div class="rail">
         <div class="rail-panel">
-          <p class="rail-title" id="ov-map-title">TRACE</p>
-          <svg class="track-svg" id="ov-map" viewBox="0 0 280 170" preserveAspectRatio="xMidYMid meet"></svg>
-          <div class="rail-legend"><span>S/F</span><span id="ov-map-note"></span></div>
+          <p class="rail-title">GAP TO BEST</p>
+          <svg class="gap-chart" id="ov-gap" viewBox="0 0 280 90" preserveAspectRatio="none"></svg>
         </div>
         <div class="rail-panel">
-          <p class="rail-title" id="ov-speed-title">SPEED</p>
+          <p class="rail-title" id="ov-speed-title">DELTA</p>
           <svg class="speed-trace" id="ov-speed" viewBox="0 0 280 86" preserveAspectRatio="none"></svg>
-          <div class="rail-legend" id="ov-speed-legend"></div>
         </div>
       </div>
     </div>
@@ -358,6 +376,41 @@ function rtRenderClock(elId, str) {
   }
 }
 
+  
+var SPEED_BREAKS = [
+  [0, "#1e3a5f"], [40, "#0ea5e9"], [80, "#22c55e"],
+  [120, "#facc15"], [160, "#f97316"], [200, "#ef4444"],
+];
+function hexToRgb(hex) {
+  var n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function rgbToHex(rgb) {
+  return "#" + rgb.map(function (c) {
+    var h = Math.round(Math.max(0, Math.min(255, c))).toString(16);
+    return h.length < 2 ? "0" + h : h;
+  }).join("");
+}
+function colorForSpeed(v) {
+  if (v === null || v === undefined) return "#64748b";
+  var last = SPEED_BREAKS.length - 1;
+  if (v <= SPEED_BREAKS[0][0]) return SPEED_BREAKS[0][1];
+  if (v >= SPEED_BREAKS[last][0]) return SPEED_BREAKS[last][1];
+  for (var i = 0; i < last; i++) {
+    var a = SPEED_BREAKS[i], b = SPEED_BREAKS[i + 1];
+    if (v >= a[0] && v <= b[0]) {
+      var t = (v - a[0]) / (b[0] - a[0]);
+      var ca = hexToRgb(a[1]), cb = hexToRgb(b[1]);
+      return rgbToHex([
+        ca[0] + (cb[0] - ca[0]) * t,
+        ca[1] + (cb[1] - ca[1]) * t,
+        ca[2] + (cb[2] - ca[2]) * t,
+      ]);
+    }
+  }
+  return "#64748b";
+}
+
 
   var DATA = JSON.parse(document.getElementById('dashboard-payload').textContent);
 
@@ -382,18 +435,55 @@ function rtRenderClock(elId, str) {
   // this session drove, so it has no place in a ledger of this session's
   // laps: filtered out here rather than at the payload level since Analysis
   // still needs it.
+  // A track Overview (DATA.sessions present) pools every session's laps the
+  // same way the Analysis track dashboard does -- same payload, same merge.
+  var isTrackPage = !!(DATA.sessions && DATA.sessions.length);
+  function sessionFor(l) {
+    if (!isTrackPage || !l || l.session_idx === undefined || l.session_idx === null) return null;
+    for (var i = 0; i < DATA.sessions.length; i++) {
+      if (DATA.sessions[i].idx === l.session_idx) return DATA.sessions[i];
+    }
+    return null;
+  }
+  // Human-readable "which lap": "lap 5" on a session page, "Fri 25 Sep ·
+  // Session 2, lap 5" on a track page -- the merged `n` is a cross-session
+  // sequence number, meaningless to a viewer on its own. Takes either a
+  // full lap object or a slimmer one (summary.best_lap only carries n/
+  // time_s/label) -- the latter is looked up in `laps` for session_idx/
+  // lap_number, so callers never need to know which kind they have.
+  function lapByN(n) {
+    for (var i = 0; i < laps.length; i++) { if (laps[i].n === n) return laps[i]; }
+    return null;
+  }
+  function lapDesc(l) {
+    if (!l) return '';
+    var full = (l.session_idx !== undefined) ? l : (lapByN(l.n) || l);
+    if (isTrackPage) {
+      var sess = sessionFor(full);
+      var ln = (full.lap_number !== undefined && full.lap_number !== null) ? full.lap_number : full.n;
+      return (sess ? (sess.day_label || sess.name) : 'session') + ', lap ' + ln;
+    }
+    return 'lap ' + full.n;
+  }
+
   var laps = (DATA.laps || []).filter(function (l) { return !l.ghost; }).sort(function (a, b) { return a.n - b.n; });
   var clean = laps.filter(function (l) { return !l.excluded && l.time_s !== null && l.time_s !== undefined; });
   var best = DATA.summary && DATA.summary.best_lap;
+  var refLap = (DATA.reference_lap !== null && DATA.reference_lap !== undefined)
+    ? laps.find(function (l) { return l.n === DATA.reference_lap; }) : null;
 
   // ── header ──────────────────────────────────────────────────────────
   document.getElementById('ov-track').textContent = DATA.session.track_name || 'Unknown track';
-  document.getElementById('ov-meta').textContent =
-    (DATA.session.day_label || '') + ' · ' + laps.length + (laps.length === 1 ? ' lap' : ' laps') + ' scored';
+  document.getElementById('ov-meta').textContent = isTrackPage
+    ? (DATA.sessions.length + (DATA.sessions.length === 1 ? ' session' : ' sessions') + ' · ' +
+       laps.length + (laps.length === 1 ? ' lap' : ' laps'))
+    : ((DATA.session.day_label || '') + ' · ' + laps.length + (laps.length === 1 ? ' lap' : ' laps') + ' scored');
   document.title = DATA.session.name || document.title;
 
   var here = document.getElementById('crumb-here');
-  if (DATA.site_mode) {
+  if (isTrackPage) {
+    here.textContent = DATA.session.track_name || '';
+  } else if (DATA.site_mode) {
     here.innerHTML = '<a href="index.html">' + escHtml(DATA.session.track_name || '') + '</a>' +
       '<span class="sep" aria-hidden="true"> / </span>' + escHtml(DATA.session.day_label || '');
   } else {
@@ -415,7 +505,9 @@ function rtRenderClock(elId, str) {
   // ── hero ────────────────────────────────────────────────────────────
   if (best) {
     rtRenderClock('ov-clock', fmtTime(best.time_s));
-    document.getElementById('ov-clock-label').textContent = 'BEST LAP · LAP ' + best.n;
+    document.getElementById('ov-clock-label').textContent = isTrackPage
+      ? ('TRACK RECORD · ' + lapDesc(best))
+      : ('BEST LAP · LAP ' + best.n);
     var tb = DATA.summary.theoretical_best_s;
     document.getElementById('ov-clock-sub').textContent = (tb !== null && tb !== undefined && tb < best.time_s)
       ? ((best.time_s - tb).toFixed(3) + 's off the theoretical best')
@@ -446,17 +538,20 @@ function rtRenderClock(elId, str) {
       .filter(function (v) { return v !== null && v !== undefined; });
     bestSector.push(vals.length ? Math.min.apply(null, vals) : null);
   }
+  var totalCols = 1 + nSectors + 2;
   var headHtml = '<th>Lap</th>';
   for (var hs = 0; hs < nSectors; hs++) headHtml += '<th>S' + (hs + 1) + '</th>';
   headHtml += '<th>Lap time</th><th>Gap</th>';
   document.getElementById('ov-ledger-head').innerHTML = headHtml;
 
   var body = document.getElementById('ov-ledger-body');
-  laps.forEach(function (l) {
+  function renderLapRow(l) {
     var isBest = !!(best && l.n === best.n);
     var tr = document.createElement('tr');
     tr.className = 'lap-row' + (isBest ? ' is-overall-best' : '') + (l.excluded ? ' is-flagged' : '');
-    var cells = '<td class="n">' + l.n + '</td>';
+    tr.setAttribute('lap-n', l.n);
+    var lapNum = isTrackPage && l.lap_number !== undefined && l.lap_number !== null ? l.lap_number : l.n;
+    var cells = '<td class="n">' + lapNum + '</td>';
     for (var k = 0; k < nSectors; k++) {
       var sv = l.sectors ? l.sectors[k] : null;
       var isBestSplit = sv !== null && sv !== undefined && bestSector[k] !== null && sv <= bestSector[k] + 5e-4;
@@ -476,10 +571,29 @@ function rtRenderClock(elId, str) {
     cells += '<td class="time">' + fmtTime(l.time_s) + '</td><td class="gap">' + gapHtml + '</td>';
     tr.innerHTML = cells;
     body.appendChild(tr);
-  });
-  document.getElementById('ov-ledger-foot').textContent = (DATA.reference_lap !== null && DATA.reference_lap !== undefined)
-    ? ('Reference lap for every chart on Analysis: lap ' + DATA.reference_lap + '.')
-    : 'No clean lap yet this session.';
+  }
+  if (isTrackPage) {
+    // One sub-header row per session, so a track's full lap history reads
+    // as "sessions, each with their laps" rather than one flat list with a
+    // meaningless running lap count -- and gives somewhere to click back
+    // down into that session's own Overview.
+    DATA.sessions.forEach(function (s) {
+      var rows = laps.filter(function (l) { return l.session_idx === s.idx; });
+      if (!rows.length) return;
+      var head = document.createElement('tr');
+      head.className = 'ledger-session-row';
+      var label = escHtml(s.day_label || s.name || s.id);
+      var cellHtml = (DATA.site_mode && s.id) ? ('<a href="' + escHtml(s.id) + '-overview.html">' + label + '</a>') : label;
+      head.innerHTML = '<td colspan="' + totalCols + '">' + cellHtml + '</td>';
+      body.appendChild(head);
+      rows.forEach(renderLapRow);
+    });
+  } else {
+    laps.forEach(renderLapRow);
+  }
+  document.getElementById('ov-ledger-foot').textContent = refLap
+    ? ('Reference lap for every chart on Analysis: ' + lapDesc(refLap) + '.')
+    : 'No clean lap yet' + (isTrackPage ? ' at this track.' : ' this session.');
 
   // ── sector strip ────────────────────────────────────────────────────
   if (nSectors > 0) {
@@ -490,65 +604,143 @@ function rtRenderClock(elId, str) {
       var holderLap = null;
       clean.forEach(function (l) {
         var v = l.sectors ? l.sectors[si2] : null;
-        if (v !== null && v !== undefined && bestSector[si2] !== null && v <= bestSector[si2] + 5e-4) holderLap = l.n;
+        if (v !== null && v !== undefined && bestSector[si2] !== null && v <= bestSector[si2] + 5e-4) holderLap = l;
       });
       sHtml += '<div class="sector-cell"><div class="sector-name">Sector ' + (si2 + 1) + '</div>' +
         '<div class="sector-time">' + (bestSector[si2] !== null ? bestSector[si2].toFixed(2) + '<span class="unit">s</span>' : '—') + '</div>' +
-        (holderLap !== null ? '<div class="sector-holder">best · lap ' + holderLap + '</div>' : '') + '</div>';
+        (holderLap ? '<div class="sector-holder">best · ' + escHtml(lapDesc(holderLap)) + '</div>' : '') + '</div>';
     }
     strip.innerHTML = sHtml;
   }
 
-  // ── rail: the reference lap's trace + speed ──────────────────────────
-  var refLap = (DATA.reference_lap !== null && DATA.reference_lap !== undefined)
-    ? laps.find(function (l) { return l.n === DATA.reference_lap; }) : null;
-  if (refLap) {
-    document.getElementById('ov-map-title').textContent = 'LAP ' + refLap.n + ' TRACE';
-    document.getElementById('ov-speed-title').textContent = 'SPEED — LAP ' + refLap.n;
-    var latCh = refLap.channels && refLap.channels.lat, lonCh = refLap.channels && refLap.channels.lon;
-    if (latCh && lonCh && latCh.v && latCh.v.length > 1) {
-      var lats = latCh.v, lons = lonCh.v;
-      var latMin = Math.min.apply(null, lats), latMax = Math.max.apply(null, lats);
-      var lonMin = Math.min.apply(null, lons), lonMax = Math.max.apply(null, lons);
-      // Rough local projection: longitude scaled by cos(latitude) so the
-      // outline isn't stretched east-west at this track's latitude -- this
-      // is a sketch of the lap, not a real map (the Analysis page's Leaflet
-      // map is the one to measure anything from).
-      var midLatRad = ((latMin + latMax) / 2) * Math.PI / 180;
-      var lonScale = Math.cos(midLatRad) || 1;
-      var w = (lonMax - lonMin) * lonScale, h = (latMax - latMin);
-      var pad = 14, W = 280, H = 170;
-      var scale = Math.min((W - 2 * pad) / (w || 1e-9), (H - 2 * pad) / (h || 1e-9));
-      function px(lon) { return pad + (lon - lonMin) * lonScale * scale; }
-      function py(lat) { return (H - pad) - (lat - latMin) * scale; }
-      var d = '';
-      for (var i = 0; i < lats.length; i++) {
-        d += (i === 0 ? 'M' : 'L') + px(lons[i]).toFixed(1) + ',' + py(lats[i]).toFixed(1) + ' ';
+  // ── rail: gap to the best, every lap (no reference lap needed) ───────
+  // A spatial trace of one lap turned out to read as just "the shape of
+  // the track" however it was coloured -- this is the same ledger data
+  // (time_s vs. bestAllTime) as a shape instead: a flat run of short bars
+  // is a consistent session, one tall bar is the lap that got away.
+  var gapEl = document.getElementById('ov-gap');
+  if (clean.length) {
+    var Wg = 280, Hg = 90, padB = 10, gap = 3;
+    var maxGap = Math.max.apply(null, clean.map(function (l) { return l.time_s - bestAllTime; }).concat([0.001]));
+    var bw = (Wg - gap * (laps.length - 1)) / laps.length;
+    var gHtml = '';
+    laps.forEach(function (l, idx) {
+      var x = idx * (bw + gap);
+      // A session boundary (track page only) gets a hairline, not a label --
+      // the ledger above already names every session; this just shows where
+      // one stops and the next starts.
+      if (isTrackPage && idx > 0 && l.session_idx !== laps[idx - 1].session_idx) {
+        gHtml += '<line class="gap-session-sep" x1="' + (x - gap / 2).toFixed(1) + '" y1="0" x2="' + (x - gap / 2).toFixed(1) + '" y2="' + Hg + '"></line>';
       }
-      document.getElementById('ov-map').innerHTML = '<path class="trace" d="' + d + '"></path>' +
-        '<circle class="sf" cx="' + px(lons[0]).toFixed(1) + '" cy="' + py(lats[0]).toFixed(1) + '" r="3.5"></circle>';
-    } else {
-      document.getElementById('ov-map').outerHTML = '<p class="rail-empty">No position trace for this lap.</p>';
-    }
-    var spCh = refLap.channels && refLap.channels.speed_kmh;
-    if (spCh && spCh.v && spCh.v.length > 1) {
-      var sv = spCh.v, maxSp = Math.max.apply(null, sv);
-      var W2 = 280, H2 = 86, pad2 = 4;
-      function sx(i) { return (i / (sv.length - 1)) * W2; }
-      function sy(v) { return H2 - pad2 - (v / (maxSp || 1)) * (H2 - 2 * pad2); }
-      var line = '', i2;
-      for (i2 = 0; i2 < sv.length; i2++) line += (i2 === 0 ? 'M' : 'L') + sx(i2).toFixed(1) + ',' + sy(sv[i2]).toFixed(1) + ' ';
-      var fill = line + 'L' + W2 + ',' + H2 + ' L0,' + H2 + ' Z';
-      document.getElementById('ov-speed').innerHTML =
-        '<path class="fill" d="' + fill + '"></path><path class="line" d="' + line + '"></path>';
-      document.getElementById('ov-speed-legend').innerHTML = '<span>0</span><span>' + Math.round(maxSp) + ' km/h</span>';
-    } else {
-      document.getElementById('ov-speed').outerHTML = '<p class="rail-empty">No speed trace for this lap.</p>';
-    }
-    document.getElementById('ov-map-note').textContent = refLap.excluded ? 'excluded lap' : '';
+      var cls = 'gap-bar', h, y, title;
+      if (l.excluded) {
+        cls += ' gap-bar-excluded';
+        h = 5; y = Hg - padB - h;
+        title = lapDesc(l) + ': excluded';
+      } else if (l.time_s === null || l.time_s === undefined) {
+        cls += ' gap-bar-excluded'; h = 5; y = Hg - padB - h; title = lapDesc(l) + ': no time';
+      } else {
+        var g = l.time_s - bestAllTime;
+        if (best && l.n === best.n) cls += ' gap-bar-best';
+        h = Math.max(3, (g / maxGap) * (Hg - padB - 6));
+        y = Hg - padB - h;
+        title = lapDesc(l) + ': ' + (g <= 5e-4 ? 'best lap' : ('+' + g.toFixed(2) + 's'));
+      }
+      gHtml += '<rect class="' + cls + '" lap-n="' + l.n + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '"><title>' + escHtml(title) + '</title></rect>';
+    });
+    gHtml += '<line class="gap-baseline" x1="0" y1="' + (Hg - padB) + '" x2="' + Wg + '" y2="' + (Hg - padB) + '"></line>';
+    gapEl.innerHTML = gHtml;
   } else {
-    document.getElementById('ov-map').outerHTML = '<p class="rail-empty">No reference lap yet.</p>';
-    document.getElementById('ov-speed').outerHTML = '<p class="rail-empty">No reference lap yet.</p>';
+    gapEl.outerHTML = '<p class="rail-empty">No clean lap yet' + (isTrackPage ? ' at this track.' : ' this session.') + '</p>';
+  }
+
+  // ── rail: delta vs the best lap, for one clicked lap at a time ───────
+  // delta_s (already computed server-side, same number Analysis's Gap
+  // chart plots) answers "where was I faster/slower than the best lap"
+  // directly -- more useful than either lap's raw shape or speed on their
+  // own. Click a bar above or a row in the ledger to load that lap here;
+  // defaults to the best lap's closest rival, since the best lap compared
+  // to itself is just a flat line at zero.
+  var gridM = DATA.grid_m || [];
+  var compareN = null;
+  if (best) {
+    var rivals = clean.filter(function (l) { return l.n !== best.n && l.channels && l.channels.delta_s && l.channels.delta_s.v && l.channels.delta_s.v.length; })
+      .sort(function (a, b) { return a.time_s - b.time_s; });
+    compareN = rivals.length ? rivals[0].n : best.n;
+  }
+
+  function setCompared(n) {
+    gapEl.querySelectorAll ? gapEl.querySelectorAll('[lap-n]').forEach(function (el) { el.classList.toggle('is-compared', el.getAttribute('lap-n') === String(n)); }) : null;
+    body.querySelectorAll('[lap-n]').forEach(function (el) { el.classList.toggle('is-compared', el.getAttribute('lap-n') === String(n)); });
+  }
+
+  function renderDelta(n) {
+    var l = laps.find(function (x) { return x.n === n; });
+    var titleEl = document.getElementById('ov-speed-title');
+    var dv = l && l.channels && l.channels.delta_s && l.channels.delta_s.v;
+    if (!l || !dv || !dv.length || !gridM.length) {
+      titleEl.textContent = 'DELTA';
+      document.getElementById('ov-speed').innerHTML =
+        '<text x="140" y="46" text-anchor="middle" class="rail-empty-svg">Click a lap to compare it against the best.</text>';
+      return;
+    }
+    titleEl.textContent = 'DELTA · ' + lapDesc(l) + ' vs the best';
+    var n2 = Math.min(dv.length, gridM.length);
+    var maxAbs = 0.5;
+    for (var i = 0; i < n2; i++) { if (Math.abs(dv[i]) > maxAbs) maxAbs = Math.abs(dv[i]); }
+    var W2 = 280, H2 = 86, padT = 10;
+    var midY = H2 / 2;
+    var scaleY = (H2 / 2 - padT) / maxAbs;
+    function sx(i) { return (i / (n2 - 1)) * W2; }
+    function sy(v) { return midY - v * scaleY; }
+    var segHtml = '<line class="delta-zero" x1="0" y1="' + midY + '" x2="' + W2 + '" y2="' + midY + '"></line>';
+    for (var i2 = 0; i2 < n2 - 1; i2++) {
+      var mid = (dv[i2] + dv[i2 + 1]) / 2;
+      segHtml += '<path class="delta-seg ' + (mid > 0 ? 'delta-behind' : 'delta-ahead') + '" d="M' +
+        sx(i2).toFixed(1) + ',' + sy(dv[i2]).toFixed(1) + ' L' + sx(i2 + 1).toFixed(1) + ',' + sy(dv[i2 + 1]).toFixed(1) + '"></path>';
+    }
+    // Sector gate crossings, mapped onto the shared distance grid the same
+    // way Analysis resolves them -- the same numbers the ledger's S1/S2/S3
+    // columns split on.
+    var sectorGates = (DATA.gates && DATA.gates.sectors) || [];
+    sectorGates.forEach(function (g) {
+      if (g.dist_m === null || g.dist_m === undefined) return;
+      var nearest = 0, nearestDiff = Infinity;
+      for (var di = 0; di < n2; di++) {
+        var diff = Math.abs(gridM[di] - g.dist_m);
+        if (diff < nearestDiff) { nearestDiff = diff; nearest = di; }
+      }
+      var gx = sx(nearest);
+      segHtml += '<line class="sector-tick" x1="' + gx.toFixed(1) + '" y1="2" x2="' + gx.toFixed(1) + '" y2="' + (H2 - 2) + '"></line>' +
+        '<text class="sector-tick-label" x="' + gx.toFixed(1) + '" y="10">S' + g.number + '</text>';
+    });
+    var finalGap = dv[n2 - 1];
+    var endCls = finalGap > 0 ? 'delta-behind' : 'delta-ahead';
+    segHtml += '<text class="delta-end-label ' + endCls + '" x="' + (W2 - 2) + '" y="' +
+      Math.max(10, Math.min(H2 - 2, sy(finalGap) + (finalGap > 0 ? 11 : -3))).toFixed(1) + '" text-anchor="end">' +
+      (finalGap > 0 ? '+' : '−') + Math.abs(finalGap).toFixed(2) + 's at the line</text>';
+    document.getElementById('ov-speed').innerHTML = segHtml;
+  }
+
+  function selectCompareLap(n) {
+    compareN = n;
+    renderDelta(n);
+    setCompared(n);
+  }
+  if (compareN !== null) {
+    renderDelta(compareN);
+    setCompared(compareN);
+    gapEl.addEventListener('click', function (e) {
+      var t = e.target.closest && e.target.closest('[lap-n]');
+      if (t) selectCompareLap(Number(t.getAttribute('lap-n')));
+    });
+    body.addEventListener('click', function (e) {
+      var t = e.target.closest && e.target.closest('[lap-n]');
+      if (t) selectCompareLap(Number(t.getAttribute('lap-n')));
+    });
+  } else {
+    document.getElementById('ov-speed-title').textContent = 'DELTA';
+    document.getElementById('ov-speed').outerHTML = '<p class="rail-empty">No clean lap yet to compare.</p>';
   }
 })();
 </script>
