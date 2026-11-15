@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<!-- rt-demo-key: de3f3258575b7c42 -->
+<!-- rt-demo-key: 84f8fb04e817be75 -->
 <!-- rt-demo-source: summit_point -->
-<!-- rt-fingerprint: 924ba5c7d59a4e00 -->
+<!-- rt-fingerprint: 9f87f3705d29c3e4 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -942,7 +942,7 @@ a.ver-chip:hover { color: var(--text); text-decoration: none; }
 function rtStartApp(L, Plotly) {
   "use strict";
   var DATA = JSON.parse(document.getElementById('dashboard-payload').textContent);
-  var RENDER_FINGERPRINT = "924ba5c7d59a4e00";
+  var RENDER_FINGERPRINT = "9f87f3705d29c3e4";
 
   // ── payload axes/channels -> per-lap working arrays ────────────────────
   // Each lap arrives as named time `axes` plus `channels` that reference one
@@ -1057,41 +1057,7 @@ function rtStartApp(L, Plotly) {
   function lapLabel(l) { return (l && l.label) ? l.label : "L" + (l ? l.n : "?"); }
 
   // Speed colour gradient (hexToRgb/rgbToHex/SPEED_BREAKS/colorForSpeed) is
-  // injected here from the shared theme (
-var SPEED_BREAKS = [
-  [0, "#1e3a5f"], [40, "#0ea5e9"], [80, "#22c55e"],
-  [120, "#facc15"], [160, "#f97316"], [200, "#ef4444"],
-];
-function hexToRgb(hex) {
-  var n = parseInt(hex.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-function rgbToHex(rgb) {
-  return "#" + rgb.map(function (c) {
-    var h = Math.round(Math.max(0, Math.min(255, c))).toString(16);
-    return h.length < 2 ? "0" + h : h;
-  }).join("");
-}
-function colorForSpeed(v) {
-  if (v === null || v === undefined) return "#64748b";
-  var last = SPEED_BREAKS.length - 1;
-  if (v <= SPEED_BREAKS[0][0]) return SPEED_BREAKS[0][1];
-  if (v >= SPEED_BREAKS[last][0]) return SPEED_BREAKS[last][1];
-  for (var i = 0; i < last; i++) {
-    var a = SPEED_BREAKS[i], b = SPEED_BREAKS[i + 1];
-    if (v >= a[0] && v <= b[0]) {
-      var t = (v - a[0]) / (b[0] - a[0]);
-      var ca = hexToRgb(a[1]), cb = hexToRgb(b[1]);
-      return rgbToHex([
-        ca[0] + (cb[0] - ca[0]) * t,
-        ca[1] + (cb[1] - ca[1]) * t,
-        ca[2] + (cb[2] - ca[2]) * t,
-      ]);
-    }
-  }
-  return "#64748b";
-}
-) -- Overview's
+  // injected below from the shared theme (theme.SPEED_COLOR_JS) -- Overview's
   // rail uses the same function, so a lap looks the same wherever it's drawn.
   
 var SPEED_BREAKS = [
