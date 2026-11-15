@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<!-- rt-demo-key: 57632de0345680e9 -->
+<!-- rt-demo-key: de3f3258575b7c42 -->
 <!-- rt-demo-source: summit_point -->
-<!-- rt-fingerprint: e80312f3827b3d4a -->
+<!-- rt-fingerprint: 924ba5c7d59a4e00 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -251,6 +251,8 @@ a.ver-chip:hover { color: var(--text); text-decoration: none; }
     display: flex; align-items: center; gap: 8px; padding: 10px 16px 4px; flex-wrap: wrap;
   }
   .lap-group-heading .lg-name { font-size: 12px; font-weight: 600; color: var(--text-3); letter-spacing: 0.01em; margin-right: auto; }
+  .lap-group-heading a.lg-name { color: var(--accent); text-decoration: none; }
+  .lap-group-heading a.lg-name:hover { text-decoration: underline; }
   .lap-group-heading .session-potential { font-size: 12px; color: var(--accent); font-family: var(--font-mono); }
   .lap-group-heading button.small-btn { min-height: 28px; padding: 0 8px; font-size: 12px; background: none; border: 0; color: var(--accent); }
   .lap-group-heading button.small-btn:hover { background: var(--subtle); }
@@ -940,7 +942,7 @@ a.ver-chip:hover { color: var(--text); text-decoration: none; }
 function rtStartApp(L, Plotly) {
   "use strict";
   var DATA = JSON.parse(document.getElementById('dashboard-payload').textContent);
-  var RENDER_FINGERPRINT = "e80312f3827b3d4a";
+  var RENDER_FINGERPRINT = "924ba5c7d59a4e00";
 
   // ── payload axes/channels -> per-lap working arrays ────────────────────
   // Each lap arrives as named time `axes` plus `channels` that reference one
@@ -1054,42 +1056,78 @@ function rtStartApp(L, Plotly) {
   }
   function lapLabel(l) { return (l && l.label) ? l.label : "L" + (l ? l.n : "?"); }
 
-  // Speed colour gradient for the "Color by speed" map toggle — same
-  // breakpoints as analysis/map_overlay.py's _SPEED_COLOURMAP, so a lap
-  // traced here looks the same as it would on the plain session map.
-  var SPEED_BREAKS = [
-    [0, "#1e3a5f"], [40, "#0ea5e9"], [80, "#22c55e"],
-    [120, "#facc15"], [160, "#f97316"], [200, "#ef4444"],
-  ];
-  function hexToRgb(hex) {
-    var n = parseInt(hex.slice(1), 16);
-    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-  }
-  function rgbToHex(rgb) {
-    return "#" + rgb.map(function (c) {
-      var h = Math.round(Math.max(0, Math.min(255, c))).toString(16);
-      return h.length < 2 ? "0" + h : h;
-    }).join("");
-  }
-  function colorForSpeed(v) {
-    if (v === null || v === undefined) return "#64748b";
-    var last = SPEED_BREAKS.length - 1;
-    if (v <= SPEED_BREAKS[0][0]) return SPEED_BREAKS[0][1];
-    if (v >= SPEED_BREAKS[last][0]) return SPEED_BREAKS[last][1];
-    for (var i = 0; i < last; i++) {
-      var a = SPEED_BREAKS[i], b = SPEED_BREAKS[i + 1];
-      if (v >= a[0] && v <= b[0]) {
-        var t = (v - a[0]) / (b[0] - a[0]);
-        var ca = hexToRgb(a[1]), cb = hexToRgb(b[1]);
-        return rgbToHex([
-          ca[0] + (cb[0] - ca[0]) * t,
-          ca[1] + (cb[1] - ca[1]) * t,
-          ca[2] + (cb[2] - ca[2]) * t,
-        ]);
-      }
+  // Speed colour gradient (hexToRgb/rgbToHex/SPEED_BREAKS/colorForSpeed) is
+  // injected here from the shared theme (
+var SPEED_BREAKS = [
+  [0, "#1e3a5f"], [40, "#0ea5e9"], [80, "#22c55e"],
+  [120, "#facc15"], [160, "#f97316"], [200, "#ef4444"],
+];
+function hexToRgb(hex) {
+  var n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function rgbToHex(rgb) {
+  return "#" + rgb.map(function (c) {
+    var h = Math.round(Math.max(0, Math.min(255, c))).toString(16);
+    return h.length < 2 ? "0" + h : h;
+  }).join("");
+}
+function colorForSpeed(v) {
+  if (v === null || v === undefined) return "#64748b";
+  var last = SPEED_BREAKS.length - 1;
+  if (v <= SPEED_BREAKS[0][0]) return SPEED_BREAKS[0][1];
+  if (v >= SPEED_BREAKS[last][0]) return SPEED_BREAKS[last][1];
+  for (var i = 0; i < last; i++) {
+    var a = SPEED_BREAKS[i], b = SPEED_BREAKS[i + 1];
+    if (v >= a[0] && v <= b[0]) {
+      var t = (v - a[0]) / (b[0] - a[0]);
+      var ca = hexToRgb(a[1]), cb = hexToRgb(b[1]);
+      return rgbToHex([
+        ca[0] + (cb[0] - ca[0]) * t,
+        ca[1] + (cb[1] - ca[1]) * t,
+        ca[2] + (cb[2] - ca[2]) * t,
+      ]);
     }
-    return "#64748b";
   }
+  return "#64748b";
+}
+) -- Overview's
+  // rail uses the same function, so a lap looks the same wherever it's drawn.
+  
+var SPEED_BREAKS = [
+  [0, "#1e3a5f"], [40, "#0ea5e9"], [80, "#22c55e"],
+  [120, "#facc15"], [160, "#f97316"], [200, "#ef4444"],
+];
+function hexToRgb(hex) {
+  var n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function rgbToHex(rgb) {
+  return "#" + rgb.map(function (c) {
+    var h = Math.round(Math.max(0, Math.min(255, c))).toString(16);
+    return h.length < 2 ? "0" + h : h;
+  }).join("");
+}
+function colorForSpeed(v) {
+  if (v === null || v === undefined) return "#64748b";
+  var last = SPEED_BREAKS.length - 1;
+  if (v <= SPEED_BREAKS[0][0]) return SPEED_BREAKS[0][1];
+  if (v >= SPEED_BREAKS[last][0]) return SPEED_BREAKS[last][1];
+  for (var i = 0; i < last; i++) {
+    var a = SPEED_BREAKS[i], b = SPEED_BREAKS[i + 1];
+    if (v >= a[0] && v <= b[0]) {
+      var t = (v - a[0]) / (b[0] - a[0]);
+      var ca = hexToRgb(a[1]), cb = hexToRgb(b[1]);
+      return rgbToHex([
+        ca[0] + (cb[0] - ca[0]) * t,
+        ca[1] + (cb[1] - ca[1]) * t,
+        ca[2] + (cb[2] - ca[2]) * t,
+      ]);
+    }
+  }
+  return "#64748b";
+}
+
 
   // G-force colour gradient for the map's "G-force" trace-colour mode --
   // same breakpoints as analysis/map_overlay.py's _G_COLOURMAP (folded in
@@ -1431,7 +1469,18 @@ function rtStartApp(L, Plotly) {
 
         var heading = document.createElement('div');
         heading.className = 'lap-group-heading';
-        var name = document.createElement('span');
+        // A link back to that session's own Overview page -- only once
+        // published (site_mode): that's the only context where a sibling
+        // "<id>-overview.html" is guaranteed to exist next to this track
+        // page. A standalone `dashboard --track` page has nowhere to send it.
+        var name;
+        if (DATA.site_mode && s.id) {
+          name = document.createElement('a');
+          name.href = s.id + '-overview.html';
+          name.title = 'Open this session';
+        } else {
+          name = document.createElement('span');
+        }
         name.className = 'lg-name';
         name.textContent = s.day_label || s.name || s.id;
         heading.appendChild(name);
