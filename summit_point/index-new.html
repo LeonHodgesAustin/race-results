@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- rt-fingerprint: 193666d1ec33b24c -->
+<!-- rt-fingerprint: 22b5a73eee54a688 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -283,11 +283,43 @@ var N = D.n, STEP = D.step, LAPS = D.laps;
 var INSPECT = '';
 // The Spectrogram Inspector: one link on a session page, one per session on a track page.
 function inspectLinks() {
-  if (INSPECT) return '<a href="' + INSPECT + '">Open the Spectrogram Inspector</a>';
+  if (INSPECT) return '<a class="inspl" href="' + INSPECT + '">Open the Spectrogram Inspector</a>';
   var ins = D.inspectors || [], ids = {};
   S.sel.forEach(function (i) { var s = D.sessions[LAPS[i].session_idx]; if (s) ids[s.id] = 1; });
   var pick = ins.filter(function (x) { return ids[x.id]; });   // the sessions of the laps you picked
-  return (pick.length ? pick : ins).map(function (s) { return '<a href="' + s.href + '">Spectrogram: ' + s.label + '</a>'; }).join('<br>');
+  return (pick.length ? pick : ins).map(function (s) { return '<a class="inspl" data-sid="' + String(s.id).replace(/"/g, '') + '" href="' + s.href + '">Spectrogram: ' + s.label + '</a>'; }).join('<br>');
+}
+function tAt(l, i) {   // lap time at grid index i, from the nearest sample that has one
+  if (!l.t) return null;
+  for (var d = 0; d < N; d++) { var a = l.t[i - d], b = l.t[i + d]; if (a != null) return a; if (b != null) return b; }
+  return null;
+}
+function iAtT(l, t) {
+  var best = null, bd = Infinity;
+  for (var i = 0; i < N; i++) { var v = l.t && l.t[i]; if (v == null) continue; var d = Math.abs(v - t); if (d < bd) { bd = d; best = i; } }
+  return best;
+}
+// The Spectrogram links carry the lap, the highlighted range and the cursor, so the inspector opens on
+// what you were looking at (and its way back carries them home again).
+function syncInspect() {
+  Array.prototype.forEach.call(document.querySelectorAll('a.inspl, #insplink'), function (a) {
+    if (!a.dataset.base) a.dataset.base = a.getAttribute('href').split('#')[0];
+    var sid = a.dataset.sid || '', li = S.sel.filter(function (i) { var s = D.sessions[LAPS[i].session_idx]; return !sid || (s && String(s.id) === sid); })[0];
+    if (li == null) { a.setAttribute('href', a.dataset.base); return; }
+    var l = LAPS[li], h = '#lap=' + l.lap_number;
+    if (l.t) {
+      if (!winIsFull()) h += '&a=' + tAt(l, S.win[0]).toFixed(2) + '&b=' + tAt(l, S.win[1]).toFixed(2);
+      if (S.cur != null) h += '&c=' + tAt(l, S.cur).toFixed(2);
+    }
+    a.setAttribute('href', a.dataset.base + h);
+  });
+}
+function applyT() {   // arriving from the inspector: its lap time range and cursor become the window and cursor here
+  var m = /;ta=([\d.]+);tb=([\d.]+)/.exec(location.hash), c = /;tc=([\d.]+)/.exec(location.hash), l = LAPS[S.sel[0]];
+  if (!l || !l.t || !(m || c)) return;
+  if (m) { var a = iAtT(l, +m[1]), b = iAtT(l, +m[2]); if (a != null && b != null && a < b) { S.win = [a, b]; S.zoom = 'range'; } }
+  if (c) { var k = iAtT(l, +c[1]); if (k != null) S.cur = k; }
+  writeHash();
 }
 (function () {
   // racetelemetry / All tracks / <Track> / <this page>: every step back is a link when the site
@@ -402,6 +434,8 @@ function readHash() {
   if (sm) D.sessions.forEach(function (s, k) { if (String(s.id) === decodeURIComponent(sm[1])) si = k; });
   S.ses = si >= 0 ? si : null; applyScope();
   if (m && m[2]) S.sel = m[2].split(',').map(function (n) { return LAPS.findIndex(function (l) { return String(l.n) === n; }); }).filter(function (i) { return i >= 0 && hasTrace(LAPS[i]); }).slice(0, 4);
+  var ln = /;ln=(\d+)/.exec(location.hash);   // "that session's lap number", as the inspector names laps
+  if (ln && si >= 0) { var li = LAPS.findIndex(function (l) { return l.session_idx === si && String(l.lap_number) === ln[1]; }); if (li >= 0 && hasTrace(LAPS[li])) S.sel = [li]; }
   if (!S.sel.length) defaultSel();
 }
 function defaultSel() {
@@ -910,6 +944,7 @@ function drawReadout() {
     h += '<div class="who"><span class="sw" style="background:' + colour(si) + '"></span>' + l.label + '</div><div class="vals">' + vs.join(' · ') + '</div>';
   });
   r.innerHTML = h;
+  syncInspect();
   var wh = document.getElementById('winhint');
   if (wh) wh.textContent = (winIsFull() ? 'Whole lap' : Math.round(S.win[0] * STEP) + '–' + Math.round(S.win[1] * STEP) + ' m highlighted on the map') + (S.mode === 'window' ? ' · drag a chart to zoom, Show whole lap to reset' : ' · drag to move the cursor');
   document.querySelectorAll('#mode button').forEach(function (b) { b.classList.toggle('on', b.dataset.m === S.mode); });
@@ -1113,8 +1148,8 @@ function redraw() { if (raf) return; raf = requestAnimationFrame(function () { r
 function renderAll() { renderNav(); renderTray(); renderPanes(); redraw(); }
 window.addEventListener('resize', redraw);
 document.addEventListener('rt-themechange', function () { renderTray(); redraw(); });
-window.addEventListener('hashchange', function () { readHash(); loadSel().then(renderAll); });
-readHash(); loadSel().then(renderAll);
+window.addEventListener('hashchange', function () { readHash(); loadSel().then(function () { applyT(); renderAll(); }); });
+readHash(); loadSel().then(function () { applyT(); renderAll(); });
 })();
 </script>
 </body>

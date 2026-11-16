@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta name="rt-inspector-fingerprint" content="bda655b71359f26a">
+<!doctype html><html lang="en"><head><meta name="rt-inspector-fingerprint" content="11d441c5b75b2670">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Summit Point Raceway – Main Circuit · 2026-11-14 · S1 (45d88c9b) — Spectrogram</title>
@@ -129,6 +129,7 @@ h1{font-size:15px;margin:0}
 select,button{font:inherit;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--r-control);padding:6px 10px;min-height:40px;cursor:pointer}
 button{min-width:44px}
 button:hover{background:var(--subtle)}
+button.on{background:var(--seg-on,var(--subtle));color:var(--text);font-weight:600}
 button:active{background:var(--subtle)}
 .grow{flex:1}
 details{margin:4px 0;color:var(--text-2);font-size:13px}
@@ -146,8 +147,8 @@ canvas{display:block;width:100%}
 @media (min-width:900px){.grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:10px}}
 </style></head><body>
 <header class="appbar"><div class="appbar-inner">
- <div class="crumbs"><span class="brand"><svg class="brand-mark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2.5 2.5"></path><path d="M10 2h4"></path></svg><span>racetelemetry</span></span><span class="sep" aria-hidden="true">/</span><span class="here" aria-current="page">Spectrogram Inspector</span></div>
- <div class="appbar-actions"><a class="appbar-nav-link" href="index-new.html#laps/;s=45d88c9b">← Analysis</a>
+ <nav class="crumbs" aria-label="Breadcrumb"><a class="brand" id="brand" href="../index.html"><svg class="brand-mark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2.5 2.5"></path><path d="M10 2h4"></path></svg><span>racetelemetry</span></a><span class="sep" aria-hidden="true">/</span><a class="crumb-root" href="../index.html">All tracks</a><span class="sep" aria-hidden="true">/</span><a href="index-new.html#laps/">Summit Point Raceway – Main Circuit</a><span class="sep" aria-hidden="true">/</span><span class="here" aria-current="page">Spectrogram</span></nav>
+ <div class="appbar-actions"><a class="appbar-nav-link" id="backlink" href="index-new.html#laps/;s=45d88c9b">← Lap comparison</a>
  <button type="button" class="icon-btn theme-toggle" data-theme-toggle aria-label="Switch theme"><svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg><svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></button></div>
 </div></header>
 <div class="wrap">
@@ -175,7 +176,7 @@ canvas{display:block;width:100%}
     <div class="key"><span><i class="sw" style="background:var(--accent)"></i>mph</span><span><i class="sw" style="background:var(--ins-slip)"></i>slip % (−5 to 25)</span><span>bottom band: gear (red = none)</span></div>
    </div>
   </div>
-  <div class="card"><canvas id="map" data-h="240" style="height:240px"></canvas><div class="key">tap the track to jump there</div></div>
+  <div class="card"><div class="row" style="margin:0 0 4px"><button id="mapall" class="on" title="Always show the whole track">Whole track</button><button id="mapwin" title="Fit the map to the range shown in the charts">Zoom to range</button></div><canvas id="map" data-h="240" style="height:240px"></canvas><div class="key">tap the track to jump there</div></div>
  </div>
 </div>
 <script>
@@ -230,20 +231,29 @@ D.laps.forEach((l,i)=>{const o=document.createElement("option");o.value=i;o.text
 function fmt(s){const m=Math.floor(s/60);return m+":"+(s-60*m).toFixed(3).padStart(6,"0")}
 function dec(b64){const s=atob(b64),a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a}
 const LUT=(()=>{const o=new Uint8Array(256*3);for(let i=0;i<256;i++){const t=i/255;o[3*i]=Math.min(255,255*Math.min(1,t*1.6));o[3*i+1]=Math.min(255,Math.max(0,255*(t*t*1.1-0.15)));o[3*i+2]=Math.min(255,Math.max(0,255*(0.55-Math.abs(t-0.35)*1.4)+30*(1-t)))}return o})();
-let L=null,imgs={},A=0,B=1,cursor=0,pending=false;
+let L=null,imgs={},A=0,B=1,cursor=0,pending=false,mapZoom=false;
+// Arriving from the lap comparison: #lap=<lap>&a=<s>&b=<s>&c=<s> (lap-time seconds) is what it was showing.
+let HW=(()=>{const q=new URLSearchParams(location.hash.slice(1)),n=v=>q.has(v)&&isFinite(+q.get(v))?+q.get(v):null;return q.has("lap")?{lap:n("lap"),a:n("a"),b:n("b"),c:n("c")}:null})();
 // one offscreen image per lap+view at native resolution (frames x freqs); zoom/pan just crops it
 function image(view){if(imgs[view])return imgs[view];const S=L.spec,arr=dec(S[view]),nt=S.nt,nf=S.nf;
  const c=document.createElement("canvas");c.width=nt;c.height=nf;const x=c.getContext("2d"),id=x.createImageData(nt,nf);
  for(let t=0;t<nt;t++)for(let k=0;k<nf;k++){const v=arr[t*nf+k],o=((nf-1-k)*nt+t)*4;id.data[o]=LUT[3*v];id.data[o+1]=LUT[3*v+1];id.data[o+2]=LUT[3*v+2];id.data[o+3]=255}
  x.putImageData(id,0,0);imgs[view]=c;return c}
 function bounds(){const T=L.spec.t;return [T[0],T[T.length-1]]}
-function load(){L=D.laps[+$("lap").value];imgs={};[A,B]=bounds();cursor=Math.max(A,0);req()}
+function load(){L=D.laps[+$("lap").value];imgs={};[A,B]=bounds();cursor=Math.max(A,0);
+ if(HW&&HW.lap===L.n){if(HW.a!=null&&HW.b!=null&&HW.b>HW.a){A=HW.a;B=HW.b;clampWin();mapZoom=true}if(HW.c!=null)cursor=Math.min(Math.max(HW.c,A),B);else cursor=(A+B)/2;HW=null;syncMapBtn()}
+ req()}
+function syncMapBtn(){$("mapall").classList.toggle("on",!mapZoom);$("mapwin").classList.toggle("on",mapZoom)}
+// the way back to the lap comparison carries the lap, the range and the cursor home again
+function syncBack(){const a=$("backlink");if(!a)return;if(!a.dataset.base)a.dataset.base=a.getAttribute("href").split("#")[0];
+ const [t0,t1]=bounds(),part=(A>t0+0.05||B<t1-0.05)?`;ta=${A.toFixed(2)};tb=${B.toFixed(2)}`:"";
+ a.setAttribute("href",`${a.dataset.base}#compare/;s=${encodeURIComponent(D.meta.short)};ln=${L.n}${part};tc=${cursor.toFixed(2)}`)}
 function clampWin(){const [t0,t1]=bounds();const span=Math.min(B-A,t1-t0);if(A<t0){A=t0;B=A+span}if(B>t1){B=t1;A=B-span}}
 function zoom(f){const c=Math.min(Math.max(cursor,A),B),span=Math.max(2,(B-A)*f);A=c-(c-A)*span/(B-A);B=A+span;clampWin();req()}
 function pan(f){const s=(B-A)*f;A+=s;B+=s;clampWin();if(cursor<A||cursor>B)cursor=(A+B)/2;req()}
 function req(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;draw()})}
 function sizeCanvas(c){const w=c.clientWidth,h=+c.dataset.h,dpr=window.devicePixelRatio||1;if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr)}const x=c.getContext("2d");x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);return [x,w,h]}
-function draw(){pal();drawSpec();drawStrip();drawMap();readout()}
+function draw(){pal();drawSpec();drawStrip();drawMap();readout();syncBack()}
 function series(x,E,vals,X,Y,a,b,ymax,scale){x.beginPath();let on=false;for(let i=0;i<E.t.length;i++){const t=E.t[i],v=vals[i];if(v==null||t<a||t>b||v*scale>ymax){on=false;continue}const px=X(t),py=Y(v*scale);if(!on){x.moveTo(px,py);on=true}else x.lineTo(px,py)}x.stroke()}
 function drawSpec(){
  const c=$("spec"),[x,w,h]=sizeCanvas(c),pad={l:34,r:4,t:4,b:16},W=w-pad.l-pad.r,H=h-pad.t-pad.b,S=L.spec,E=L.eng;
@@ -275,7 +285,11 @@ function drawStrip(){
 let P=null;
 function drawMap(){
  const c=$("map"),[x,w,h]=sizeCanvas(c),G=L.gps,pad=10;
- let la0=1e9,la1=-1e9,lo0=1e9,lo1=-1e9;for(let i=0;i<G.t.length;i++){if(G.lat[i]==null)continue;la0=Math.min(la0,G.lat[i]);la1=Math.max(la1,G.lat[i]);lo0=Math.min(lo0,G.lon[i]);lo1=Math.max(lo1,G.lon[i])}
+ const [t0,t1]=bounds(),zw=mapZoom&&(A>t0+0.05||B<t1-0.05);
+ let la0=1e9,la1=-1e9,lo0=1e9,lo1=-1e9;for(let i=0;i<G.t.length;i++){if(G.lat[i]==null||(zw&&(G.t[i]<A||G.t[i]>B)))continue;la0=Math.min(la0,G.lat[i]);la1=Math.max(la1,G.lat[i]);lo0=Math.min(lo0,G.lon[i]);lo1=Math.max(lo1,G.lon[i])}
+ // never closer than ~70 m across, as in the lap comparison
+ if(la0>la1){la0=la1=G.lat.find(v=>v!=null)||0;lo0=lo1=G.lon.find(v=>v!=null)||0}
+ {const kk=Math.cos((la0+la1)/2*Math.PI/180),ms=70/111320;if(la1-la0<ms){const e=(ms-(la1-la0))/2;la0-=e;la1+=e}if((lo1-lo0)*kk<ms){const e=(ms-(lo1-lo0)*kk)/2/kk;lo0-=e;lo1+=e}}
  const k=Math.cos((la0+la1)/2*Math.PI/180),sx=(lo1-lo0)*k,sy=la1-la0,s=Math.min((w-2*pad)/sx,(h-2*pad)/sy);
  const X=lo=>pad+(lo-lo0)*k*s+((w-2*pad)-sx*s)/2,Y=la=>h-pad-(la-la0)*s-((h-2*pad)-sy*s)/2;P={X,Y};
  x.lineWidth=4;x.lineCap="round";
@@ -295,8 +309,9 @@ function scrub(c,ev){const r=c.getBoundingClientRect(),m=c._m;cursor=Math.max(A,
  ["pointerup","pointercancel"].forEach(t=>c.addEventListener(t,()=>id0=null))});
 $("map").addEventListener("click",ev=>{if(!P)return;const c=$("map"),r=c.getBoundingClientRect(),G=L.gps,px=ev.clientX-r.left,py=ev.clientY-r.top;let best=-1,bd=1e9;for(let i=0;i<G.t.length;i++){if(G.lat[i]==null)continue;const d=(P.X(G.lon[i])-px)**2+(P.Y(G.lat[i])-py)**2;if(d<bd){bd=d;best=i}}if(best<0)return;cursor=G.t[best];if(cursor<A||cursor>B){const span=B-A;A=cursor-span/2;B=A+span;clampWin()}req()});
 $("zin").onclick=()=>zoom(0.5);$("zout").onclick=()=>zoom(2);$("left").onclick=()=>pan(-0.5);$("right").onclick=()=>pan(0.5);$("all").onclick=()=>{[A,B]=bounds();req()};
-$("lap").addEventListener("change",load);["view","fmax","showGears","showHalf","showRaw","showFix"].forEach(id=>$(id).addEventListener("change",req));
+$("lap").addEventListener("change",load);$("mapall").onclick=()=>{mapZoom=false;syncMapBtn();req()};$("mapwin").onclick=()=>{mapZoom=true;syncMapBtn();req()};["view","fmax","showGears","showHalf","showRaw","showFix"].forEach(id=>$(id).addEventListener("change",req));
 document.addEventListener("rt-themechange",req); // the header toggle or the system setting changed: redraw in the new colours
 let lastW=0;window.addEventListener("resize",()=>{const w=document.documentElement.clientWidth;if(w!==lastW){lastW=w;req()}}); // ignore address-bar height changes
+if(HW&&HW.lap!=null){const i=D.laps.findIndex(l=>l.n===HW.lap);if(i>=0)$("lap").value=i}
 load();
 </script></body></html>
