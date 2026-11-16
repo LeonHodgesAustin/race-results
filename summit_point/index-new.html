@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- rt-fingerprint: 465302a413b16415 -->
+<!-- rt-fingerprint: 193666d1ec33b24c -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -154,7 +154,8 @@ nav.sections button:hover { color: var(--text); }
 /* stage */
 main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(300px, 40%) 1fr; }
 main.nomap { grid-template-columns: 1fr; }
-#mapPane { border-right: 1px solid var(--border); background: var(--surface); position: relative; min-height: 0; }
+#mapPane { border-right: 1px solid var(--border); background: var(--surface); min-height: 0; display: flex; flex-direction: column; }
+#mapwrap { position: relative; flex: 1; min-height: 0; }
 main.nomap #mapPane { display: none; }
 #map { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
 .lossrow { display: grid; grid-template-columns: 8.5em 1fr 9em; gap: 8px; align-items: center; padding: 4px 2px; cursor: pointer; border-radius: 4px; }
@@ -163,10 +164,17 @@ main.nomap #mapPane { display: none; }
 .lossrow .lb i { display: block; height: 100%; border-radius: 3px; }
 .lossrow .lv { font-family: var(--font-mono); font-size: 12.5px; text-align: right; white-space: nowrap; }
 details.card > summary { cursor: pointer; margin-bottom: 8px; }
-#mapctl { position: absolute; top: 8px; right: 8px; z-index: 2; }
-#colourctl { position: absolute; right: 8px; top: 46px; z-index: 2; }
-#layerctl { position: absolute; right: 8px; top: 84px; z-index: 2; white-space: nowrap; }
-#viewctl { position: absolute; right: 8px; bottom: 8px; z-index: 2; }
+/* the map's controls sit in a strip under the map, so they never cover the track */
+#mapbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 8px; border-top: 1px solid var(--border); background: var(--surface); }
+#mapbar .seg button, .seg-btn, #layers .seg button { min-height: 36px; padding: 6px 12px; }
+.seg-btn { border: 1px solid var(--border); border-radius: var(--r-control); background: var(--surface); color: var(--text-2); font: inherit; font-size: 13px; cursor: pointer; margin-left: auto; }
+.seg-btn.on { background: var(--seg-on); color: var(--text); font-weight: 600; }
+@media (pointer: coarse) { #mapbar .seg button, .seg-btn, #layers .seg button { min-height: 44px; min-width: 44px; } }
+#layers { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 3; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-card); padding: 8px 10px; box-shadow: 0 4px 16px rgba(0,0,0,.25); display: flex; flex-direction: column; gap: 8px; }
+#layers[hidden] { display: none; }
+#layers .lrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+#layers .lh { font-size: 12px; color: var(--text-2); min-width: 5.5em; }
+#layers .seg { flex-wrap: wrap; }
 #panes { overflow-y: auto; min-height: 0; padding: 12px 16px 24px; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); padding: 10px 12px; margin-bottom: 12px; }
 .card h3 { margin: 0 0 6px; font-size: 13px; color: var(--text-2); font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
@@ -224,7 +232,7 @@ tr.on { background: var(--accent-soft); }
 <div id="tray"></div>
 <div id="msg" role="status" hidden></div>
 <main id="main">
-  <section id="mapPane"><canvas id="map"></canvas><span class="seg" id="colourctl" title="Colour the line by speed or by total G instead of by lap"><button data-c="lap">Lap colours</button><button data-c="speed">Speed</button><button data-c="g">G</button></span><span class="seg" id="mapctl"><button data-z="track">Whole track</button><button data-z="range" title="Fit the map to the highlighted range, to inspect the line">Zoom to range</button></span><span class="seg" id="layerctl"><button data-l="lim" id="limbtn" title="Shade the range your laps have covered across the track (an estimate of where the track is, from your own driving; laps far slower than their session best are left out)">Driven range</button><button data-l="top" id="topbtn" title="Which lap is drawn on top where lines cross: click to cycle">On top</button><button data-l="pts" title="Show the sample points along the lines (off by default so they do not cover the line colours)">Points</button><button data-l="pan" title="Drag the map to pan it instead of moving the cursor">Drag to pan</button></span><span class="seg" id="viewctl"><button data-v="in" title="Zoom in" aria-label="Zoom in">+</button><button data-v="out" title="Zoom out" aria-label="Zoom out">&minus;</button><button data-v="l" title="Pan left" aria-label="Pan left">&larr;</button><button data-v="u" title="Pan up" aria-label="Pan up">&uarr;</button><button data-v="d" title="Pan down" aria-label="Pan down">&darr;</button><button data-v="r" title="Pan right" aria-label="Pan right">&rarr;</button><button data-v="fit" title="Back to the automatic fit">Fit</button></span></section>
+  <section id="mapPane"><div id="mapwrap"><canvas id="map"></canvas><div id="layers" hidden><div class="lrow"><span class="lh">Line colour</span><span class="seg" id="colourctl" title="Colour the line by speed or by total G instead of by lap"><button data-c="lap">Lap colours</button><button data-c="speed">Speed</button><button data-c="g">G</button></span></div><div class="lrow"><span class="lh">Show</span><span class="seg" id="layerctl"><button data-l="lim" id="limbtn" title="Shade the range your laps have covered across the track (an estimate of where the track is, from your own driving; laps far slower than their session best are left out)">Driven range</button><button data-l="top" id="topbtn" title="Which lap is drawn on top where lines cross: click to cycle">On top</button><button data-l="pts" title="Show the sample points along the lines (off by default so they do not cover the line colours)">Points</button><button data-l="pan" title="Drag the map to pan it instead of moving the cursor">Drag to pan</button></span></div></div></div><div id="mapbar"><span class="seg" id="mapctl"><button data-z="track">Whole track</button><button data-z="range" title="Fit the map to the highlighted range, to inspect the line">Zoom to range</button></span><button class="seg-btn" id="layersbtn" aria-expanded="false" aria-controls="layers" title="Line colour, driven range, sample points, stacking order, drag to pan">Layers &#9662;</button><span class="seg" id="viewctl"><button data-v="in" title="Zoom in" aria-label="Zoom in">+</button><button data-v="out" title="Zoom out" aria-label="Zoom out">&minus;</button><button data-v="l" title="Pan left" aria-label="Pan left">&larr;</button><button data-v="u" title="Pan up" aria-label="Pan up">&uarr;</button><button data-v="d" title="Pan down" aria-label="Pan down">&darr;</button><button data-v="r" title="Pan right" aria-label="Pan right">&rarr;</button><button data-v="fit" title="Back to the automatic fit">Fit</button></span></div></section>
   <section id="panes"></section>
 </main>
 <nav id="bottomnav"></nav>
@@ -1093,6 +1101,7 @@ mapCv.addEventListener('pointerdown', function (e) {
   if (hit) { pickCorner(hit.ci); return; }
   mapCv.setPointerCapture(e.pointerId); mapCv.dragging = true; mapPick(e);
 });
+(function () { var lb = document.getElementById('layersbtn'), lp = document.getElementById('layers'); function lay(open) { lp.hidden = !open; lb.setAttribute('aria-expanded', open ? 'true' : 'false'); lb.classList.toggle('on', open); } lb.onclick = function () { lay(lp.hidden); }; document.addEventListener('keydown', function (e) { if (e.key === 'Escape') lay(false); }); })();
 document.querySelectorAll('#mapctl button').forEach(function (b) { b.onclick = function () { S.zoom = b.dataset.z; redraw(); }; });
 document.querySelectorAll('#colourctl button').forEach(function (b) { b.onclick = function () { S.colour = b.dataset.c; redraw(); }; });
 mapCv.addEventListener('pointermove', function (e) { if (S.sec === 'data') { gateMove(e); return; } if (mapCv.panning) { var pn = mapCv.panning; mvSet(S.mv.k, pn.dx + e.clientX - pn.x, pn.dy + e.clientY - pn.y); return; } if (S.mpan) return; if (mapCv.dragging || e.pointerType === 'mouse') mapPick(e); });
