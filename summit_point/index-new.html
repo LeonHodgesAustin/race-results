@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- rt-fingerprint: 22b5a73eee54a688 -->
+<!-- rt-fingerprint: c6e79757b5d3a059 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1144,7 +1144,11 @@ mapCv.addEventListener('pointerup', function () { mapCv.dragging = false; mapCv.
 
 // ---- redraw / boot ----
 var raf = 0;
-function redraw() { if (raf) return; raf = requestAnimationFrame(function () { raf = 0; charts.forEach(drawChart); drawMap(); drawReadout(); }); }
+function redraw() { if (raf) return; raf = requestAnimationFrame(function () { raf = 0; charts.forEach(drawChart); drawMap(); drawReadout(); syncInspect(); }); }
+// The Spectrogram links are kept current on every redraw (drawReadout's own call only runs in the
+// sections that have a readout, so Data & setup's Diagnostics links used to open on the defaults),
+// and once more as one is followed, so it always carries the lap, range and cursor of this moment.
+document.addEventListener('click', function (e) { var a = e.target && e.target.closest && e.target.closest('a.inspl, #insplink'); if (a) syncInspect(); }, true);
 function renderAll() { renderNav(); renderTray(); renderPanes(); redraw(); }
 window.addEventListener('resize', redraw);
 document.addEventListener('rt-themechange', function () { renderTray(); redraw(); });
