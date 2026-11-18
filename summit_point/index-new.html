@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- rt-fingerprint: 3b4a2a91dbe8571c -->
+<!-- rt-fingerprint: 1e46f59312f200e1 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -516,8 +516,9 @@ function toggleLap(i) {
   var l = LAPS[i];
   if (!hasTrace(l) || busy[i]) return;  // no trace for that lap, or its trace is on the way
   var k = S.sel.indexOf(i);
-  if (k >= 0) { if (S.sel.length > 1) S.sel.splice(k, 1); writeHash(); renderAll(); return; }
-  var add = function () { S.sel.push(i); if (S.sel.length > 4) S.sel.shift(); showMsg(''); writeHash(); renderAll(); };
+  var rezoom = function () { if (S.sec === 'coach' && S.coach != null && S.zoom === 'range' && !winIsFull()) coachZoom(S.coach); };
+  if (k >= 0) { if (S.sel.length > 1) S.sel.splice(k, 1); rezoom(); writeHash(); renderAll(); return; }
+  var add = function () { S.sel.push(i); if (S.sel.length > 4) S.sel.shift(); rezoom(); showMsg(''); writeHash(); renderAll(); };
   if (l.loaded) { add(); return; }
   busy[i] = true; renderTray();
   loadLap(i).then(add, function () { showMsg(LOADFAIL); }).then(function () { delete busy[i]; renderTray(); });
@@ -905,14 +906,25 @@ function coachLap(l) {
 function coachCi(num) { var cs = GT().corners; for (var i = 0; i < cs.length; i++) if (cs[i].number === num) return i; return -1; }
 function pickCoach(num) {
   S.coach = num; var ci = coachCi(num); if (ci >= 0) pickCorner(ci);
+  coachZoom(num);
+  var p = document.getElementById('panes'), top = p.scrollTop; renderPanes(); p.scrollTop = top; redraw();
+}
+function coachZoom(num) {
+  var ci = coachCi(num);
   // widen the zoom to the whole corner as driven: draft gates can sit well after the brake point
   var G = coachGroup(), C = G ? G.corners.filter(function (c) { return c.number === num; })[0] : null;
   if (C && ci >= 0) {
     var gt = GT().corners[ci], R = C.reference, br = zoneBrakeRef(C);
     var pts = [br.brake_on_m, R.turn_in_m, R.track_out_m, gt.entry_dist_m, gt.exit_dist_m].filter(function (v) { return v != null; });
-    S.win = [Math.max(0, Math.floor((Math.min.apply(null, pts) - 40) / STEP)), Math.min(N - 1, Math.ceil((Math.max.apply(null, pts) + 30) / STEP))];
+    var lo = Math.min.apply(null, pts), hi = Math.max.apply(null, pts);
+    // ... and wherever the selected laps made their points (a very early brake, a late track-out), within reason
+    var lim0 = lo - 250, lim1 = hi + 150;
+    S.sel.forEach(function (li) {
+      var x = coachLap(LAPS[li]), cc = x ? x.corners.filter(function (y) { return y.corner === num; })[0] : null; if (!cc) return;
+      [cc.points.brake_on_m, cc.points.turn_in_m, cc.points.track_out_m].forEach(function (v) { if (v != null && v >= lim0 && v <= lim1) { lo = Math.min(lo, v); hi = Math.max(hi, v); } });
+    });
+    S.win = [Math.max(0, Math.floor((lo - 40) / STEP)), Math.min(N - 1, Math.ceil((hi + 30) / STEP))];
   }
-  var p = document.getElementById('panes'), top = p.scrollTop; renderPanes(); p.scrollTop = top; redraw();
 }
 function mDiff(v, ref) { if (v == null || ref == null) return ''; var d = Math.round(v - ref); return d === 0 ? '0 m' : (d > 0 ? '+' : '−') + Math.abs(d) + ' m'; }
 function typeBadge(t) { return t && CTYPE[t] ? '<span class="tbadge" title="' + CTYPE[t][1] + '">' + CTYPE[t][0] + '</span>' : ''; }
@@ -1056,17 +1068,28 @@ function placeTag(g, l, j, q, text, cx0, cy0, boxes, lineP, edge) {
   });
   var lx = best[0], ly = best[1];
   boxes.push({ x: lx - tw / 2, y: ly - th / 2, w: tw, h: th });
-  g.strokeStyle = edge; g.lineWidth = 1.5; g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(lx, ly); g.stroke();
-  g.fillStyle = css('--surface'); g.strokeStyle = edge; g.lineWidth = 1.5;
-  g.beginPath(); g.moveTo(lx - tw / 2 + 5, ly - th / 2); g.arcTo(lx + tw / 2, ly - th / 2, lx + tw / 2, ly + th / 2, 5); g.arcTo(lx + tw / 2, ly + th / 2, lx - tw / 2, ly + th / 2, 5); g.arcTo(lx - tw / 2, ly + th / 2, lx - tw / 2, ly - th / 2, 5); g.arcTo(lx - tw / 2, ly - th / 2, lx + tw / 2, ly - th / 2, 5); g.closePath(); g.fill(); g.stroke();
-  g.fillStyle = css('--text'); g.fillText(text, lx, ly + 0.5);
+  return { q: q, x: lx, y: ly, w: tw, h: th, text: text, edge: edge, font: g.font };
+}
+// draw planned tags: every leader first, then every tag on top, so a leader never runs over a label
+function drawTags(g, tags) {
+  tags.forEach(function (t) { g.strokeStyle = t.edge; g.lineWidth = 1.5; g.beginPath(); g.moveTo(t.q[0], t.q[1]); g.lineTo(t.x, t.y); g.stroke(); });
+  tags.forEach(function (t) {
+    var lx = t.x, ly = t.y, tw = t.w, th = t.h;
+    g.fillStyle = css('--surface'); g.strokeStyle = t.edge; g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(lx - tw / 2 + 5, ly - th / 2); g.arcTo(lx + tw / 2, ly - th / 2, lx + tw / 2, ly + th / 2, 5); g.arcTo(lx + tw / 2, ly + th / 2, lx - tw / 2, ly + th / 2, 5); g.arcTo(lx - tw / 2, ly + th / 2, lx - tw / 2, ly - th / 2, 5); g.arcTo(lx - tw / 2, ly - th / 2, lx + tw / 2, ly - th / 2, 5); g.closePath(); g.fill(); g.stroke();
+    g.font = t.font; g.fillStyle = css('--text'); g.fillText(t.text, lx, ly + 0.5);
+  });
 }
 function drawCoachBands(g) {
   var ref = refLap(); if (!ref || !ref.lat) return;
   var zs = coachZones(), act = activeZone(zs);
+  // the band covers the road: at least 10 m across (the driven range plus a margin), at the map's scale
+  var road = Math.max(10, ((D.limits && D.limits.width_m) || 6) + 4);
   zs.forEach(function (z) {
     var j0 = Math.round(z.lo / STEP), j1 = Math.round(z.hi / STEP), on = z === act;
-    g.strokeStyle = css('--accent'); g.globalAlpha = on ? 0.5 : 0.25; g.lineWidth = on ? 16 : 12; g.lineCap = 'round';
+    var pa = ref.lat[j0] != null ? proj(ref.lat[j0], ref.lon[j0]) : null, pb = ref.lat[j1] != null ? proj(ref.lat[j1], ref.lon[j1]) : null;
+    var pxm = pa && pb ? Math.sqrt((pb[0] - pa[0]) * (pb[0] - pa[0]) + (pb[1] - pa[1]) * (pb[1] - pa[1])) / Math.max(1, z.hi - z.lo) : 0;
+    g.strokeStyle = css('--accent'); g.globalAlpha = on ? 0.45 : 0.22; g.lineWidth = Math.max(on ? 16 : 12, road * pxm); g.lineCap = 'butt';
     g.beginPath(); var pen = false;
     for (var j = j0; j <= j1; j++) { if (ref.lat[j] == null) { pen = false; continue; } var p = proj(ref.lat[j], ref.lon[j]); if (!pen) { g.moveTo(p[0], p[1]); pen = true; } else g.lineTo(p[0], p[1]); }
     g.stroke(); g.globalAlpha = 1;
@@ -1089,18 +1112,19 @@ function drawCoachMarks(g) {
   var pts = show.map(function (z) { return z.q; }), cx0 = pts.reduce(function (s, p) { return s + p[0]; }, 0) / (pts.length || 1), cy0 = pts.reduce(function (s, p) { return s + p[1]; }, 0) / (pts.length || 1);
   var lineP = [], jlo = Math.round(Math.min.apply(null, zs.map(function (z) { return z.hlo; })) / STEP) - 150, jhi = Math.round(Math.max.apply(null, zs.map(function (z) { return z.hhi; })) / STEP) + 150;
   for (var jj = Math.max(0, jlo); jj < Math.min(N, jhi); jj += 2) if (ref.lat[jj] != null) lineP.push(proj(ref.lat[jj], ref.lon[jj]));
-  var boxes = labelBoxes.slice();
+  var boxes = labelBoxes.slice(), tags = [];
   g.font = '600 12px ' + css('--font-sans'); g.textAlign = 'center'; g.textBaseline = 'middle';
-  show.forEach(function (z) { placeTag(g, ref, z.j, z.q, z.label + (z === act ? ' · your best' : ''), cx0, cy0, boxes, lineP, css('--text')); });
+  show.forEach(function (z) { tags.push(placeTag(g, ref, z.j, z.q, z.label + (z === act ? ' · your best' : ''), cx0, cy0, boxes, lineP, css('--text'))); });
   if (act) {
     g.font = '600 11.5px ' + css('--font-sans');
     act.laps.forEach(function (q) {
       var l = LAPS[q.li], j = Math.round(q.m / STEP); if (!l.lat || l.lat[j] == null) return;
       var p = proj(l.lat[j], l.lon[j]); if (!onMap(p)) return;
       g.strokeStyle = colour(q.si); g.fillStyle = css('--surface'); g.lineWidth = 3; g.beginPath(); g.arc(p[0], p[1], 5.5, 0, 6.3); g.fill(); g.stroke();
-      placeTag(g, l, j, p, zoneTagText(q), act.q ? act.q[0] : cx0, act.q ? act.q[1] : cy0, boxes, lineP, colour(q.si));
+      tags.push(placeTag(g, l, j, p, zoneTagText(q), act.q ? act.q[0] : cx0, act.q ? act.q[1] : cy0, boxes, lineP, colour(q.si)));
     });
   }
+  drawTags(g, tags);
 }
 // the same zones on the charts: shaded columns, a line at the ideal point, and the hovered zone's lap points
 function drawCoachZonesChart(g, z, yOf, def, after) {
