@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- rt-fingerprint: 7f31f1c91dd4ae9f -->
+<!-- rt-fingerprint: 0059e6df025af76d -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -207,6 +207,11 @@ tr.dim td { color: var(--text-2); }
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 16px; font-size: 13px; }
 .kv dt { color: var(--text-2); } .kv dd { margin: 0; font-family: var(--font-mono); }
 .scroll-x { overflow-x: auto; }
+details.explain { margin-top: 8px; font-size: 13px; line-height: 1.45; }
+details.explain > summary { color: var(--accent); font-weight: 600; cursor: pointer; font-size: 13px; padding: 4px 0; }
+details.explain p { margin: 6px 0; }
+.rot td { white-space: nowrap; }
+.rot .sub { display: block; font-size: 11.5px; color: var(--text-2); }
 .tbadge { display: inline-block; font-size: 10.5px; font-weight: 600; color: var(--text-2); border: 1px solid var(--border-strong); border-radius: 999px; padding: 0 7px; margin-left: 4px; vertical-align: 1px; white-space: nowrap; }
 ol.focus { margin: 4px 0 8px; padding-left: 20px; font-size: 13.5px; }
 ol.focus li { padding: 4px 0; cursor: pointer; }
@@ -362,6 +367,7 @@ var HOWTO = {
   slip: 'How much faster the engine turns than your road speed allows in that gear. A couple of percent is normal tyre creep under power. Bigger spikes out of corners are wheelspin; with an open diff 15% is roughly one rear wheel spinning 30% faster than the road.',
   yaw: 'How much faster the car is turning than the path it is on, from the gyro. Above zero the rear may be stepping out; below zero a slide may be being caught. It reads near zero in a steady corner however sideways the car is, so it shows the moments the car moves around, not how much it slides, and a steady 1-2 deg/s through one corner can be that corner\'s banking. Read it with slip: spin with no rise in rotation can be the inside rear spinning on the open diff, but a steady slide would show nothing here either. About 1 deg/s is noise.'
 };
+var EXPLAIN = {"spd": "<p><b>What it shows.</b> Road speed in mph along the lap, every lap you've selected on top of each other. The bottom of each dip is how fast you were through that corner; where a line starts falling is where the car started slowing; how steeply it climbs afterwards is how hard the car drove out.</p><p><b>How it's measured.</b> From the GPS (ten readings a second), placed on a 2 m grid along the lap so laps line up by position on the track, not by time.</p><p><b>What good looks like.</b> A higher minimum speed in a corner, and a line that climbs earlier and keeps climbing out of it. A lap that brakes later but reaches the same minimum speed has gained the difference in the braking zone.</p><p><b>Watch for.</b> A dip in the middle of a straight is a lift. A line that flattens off at the end of a long straight has run out of revs or power. Two laps with the same minimum speed but different exits: compare the Acceleration chart there.</p><p><b>Limits.</b> GPS speed is smoothed, and it reports about a tenth of a second late. Braking shows on the Acceleration chart a few metres before the speed starts to fall; that is expected, not two different brake points.</p>", "gl": "<p><b>What it shows.</b> How hard the car is speeding up (above zero) or slowing down (below zero), in g. One g is the hardest a road car brakes; the Ford's best stops at Summit peak around 1.0 to 1.1 g.</p><p><b>How it's measured.</b> From the accelerometer in the logger, many times a second, lined up with the GPS position (the GPS delay is taken out). It includes the hill: going uphill reads slightly as braking, downhill slightly as accelerating.</p><p><b>What good looks like.</b> Braking: a fast drop to the peak (well under a quarter of a second), held there, then eased off smoothly as you turn in, so it rounds into the corner rather than stopping square. Out of the corner: steady acceleration with no gaps except short notches at each upshift.</p><p><b>Watch for.</b> A slow ramp down at the start of braking (feeling for it), a dip back toward zero in the middle of the stop (easing off, then braking again), a flat stretch near zero before turn-in (coasting), or dips below zero on the way out (a lift). The Coaching section flags all of these and what they cost.</p><p><b>Limits.</b> Kerbs and bumps add short spikes. Compare the shapes between laps rather than single values.</p>", "gt": "<p><b>What it shows.</b> How hard the car is turning, in g: above zero is a right-hander, below zero a left. The height of the plateau in a corner is how much grip you used.</p><p><b>How it's measured.</b> From the logger's accelerometer, sideways, lined up with the GPS position.</p><p><b>What good looks like.</b> A clean build at turn-in, a flat plateau through the middle at about the car's grip (around 1.2 to 1.3 g at Summit; more in banked T8 and T10), and a smooth unwind on the way out. On your best laps the plateau is higher and holds steady.</p><p><b>Watch for.</b> A notch in the middle of a corner (a correction or a lift), a saw-tooth (the wheel being worked, or the car moving around), a plateau lower than your best lap's (grip not used), or a late second rise (tightening the line after an early apex).</p><p><b>Limits.</b> Banking adds to it, so compare a corner with itself, not with other corners. The car's roll tips a little gravity into it; the calibration takes most of that out.</p>", "delta": "<p><b>What it shows.</b> How far each lap is ahead of or behind the fastest lap you've selected, at every point round the lap. The fastest lap is the flat line at zero.</p><p><b>How it's measured.</b> The time each lap took to reach each point on the track, minus the fastest lap's time to the same point.</p><p><b>How to read it.</b> Read the slope, not the value. Where a line climbs, that lap is losing time there; where it falls, it's gaining. A corner where the line steps up is where the time went; the value at the finish is the lap time difference.</p><p><b>Limits.</b> Smoothed, and good to a few hundredths of a second. A step of 0.02 s or less is within the noise.</p>", "rpm": "<p><b>What it shows.</b> Engine speed along the lap. The peaks before each upshift are your shift points; the configured shift point and maximum can be drawn on it.</p><p><b>How it's measured.</b> There's no tachometer wire. The logger has a vibration sensor bolted to the car, and the engine's firing frequency is tracked in that vibration. It's good to about one percent, checked against the tach in onboard video.</p><p><b>What good looks like.</b> Shifts made where the engine still pulls best (the Shifts card in Coaching works out where that is from your own laps), and no time spent bouncing on the rev limit.</p><p><b>Watch for.</b> Early shifts on the way out of a corner, and a flat top at the end of a straight (out of revs, so a gearing question).</p><p><b>Limits.</b> A brief spike or dip at a shift or over a kerb can be the tracker, not the engine. The Spectrogram Inspector shows the raw vibration behind it.</p>", "gear": "<p><b>What it shows.</b> Which gear the car was in along the lap, so you can see where you change up and down.</p><p><b>How it's measured.</b> Worked out from engine RPM against road speed, using the gear ratios and the tire's loaded size in car.toml. Every gear has its own ratio of RPM to speed.</p><p><b>Watch for.</b> Upshifts and downshifts in different places from lap to lap, or a gear held where the next one would pull harder (see the Shifts card).</p><p><b>Limits.</b> Gaps are the moments the clutch is in, or the engine speed doesn't match any gear (mid-shift, or wheelspin). It never guesses a gear there.</p>", "slip": "<p><b>What it shows.</b> How much faster the engine is turning than your road speed allows in that gear, in percent: how much the driven rear wheels are turning faster than the road.</p><p><b>How it's measured.</b> Engine RPM against GPS road speed in the current gear, with the tire's loaded rolling size and the GPS delay taken into account.</p><p><b>What good looks like.</b> About 0.3 to 1% on the straights (a driven tire always creeps a little), and short, small peaks out of slow corners.</p><p><b>Watch for.</b> Long stretches above about 6% out of slow corners: that's time spent spinning. With an open differential the engine sees the average of the two rear wheels, so 15% is roughly one wheel spinning 30% faster than the road (usually the inside one). Read it with Rotation: spin with no rotation is the inside wheel spinning away the drive; spin with rotation is power oversteer.</p><p><b>Limits.</b> Under braking in gear it reads about zero or a little negative (engine braking). Across a shift it is blank.</p>", "yaw": "<p><b>What it shows.</b> How fast the car's angle to its direction of travel is changing, in degrees per second. Above zero the car is rotating faster than the path it's on (the rear stepping out, or you rotating it on entry). Below zero it's rotating slower (a slide being caught, or the car straightening up as you unwind).</p><p><b>How it's measured.</b> Two turning rates compared at each instant: how fast the car's body is turning, from the gyro, and how fast its direction of travel is turning, from sideways G divided by speed. If they match the car is following its arc at a steady angle, so it reads zero however sideways the car is. The difference, added up over time, is how many degrees the car moved around (5 degrees per second for one second is about 5 degrees).</p><p><b>What good looks like.</b> A small, smooth rise at turn-in as the car points toward the apex, about zero through the middle (balanced), and a gentle dip as you unwind and put the power down. One smooth hump each way.</p><p><b>Watch for.</b> A spike up on the power followed by a sharp dip: the rear stepped out and you caught it, and the correction and the lost drive cost time. A back-and-forth wiggle: the car isn't settled. A big rise under braking before turn-in: the rear is unstable under braking (worth watching with the brake bias moved rearward). The Rotation by corner card below sizes each of these.</p><p><b>Limits.</b> It can't show understeer: in a push the body and the path both turn less than you asked for, so they still match. A corner's banking can show as a steady 1 to 2 degrees per second, and under about 1 is noise.</p>"};
 var CH = {
   spd:   { label: 'Speed', unit: 'mph', dec: 0, get: function (l, i) { return l.spd && l.spd[i]; } },
   gl:    { label: 'Acceleration / braking', unit: 'g', dec: 2, get: function (l, i) { return l.gl && l.gl[i]; } },
@@ -560,6 +566,12 @@ function renderPanes() {
     var c = el('div', 'card'); c.appendChild(el('h3', null, '<span>' + CH[k].label + (CH[k].unit ? ' (' + CH[k].unit + ')' : '') + '</span>'));
     var cv = el('canvas', 'chart'); cv.style.height = (k === 'gear' ? 90 : 150) + 'px'; c.appendChild(cv);
     if (HOWTO[k]) c.appendChild(el('p', 'hint', HOWTO[k]));
+    if (EXPLAIN[k]) {   // the full explanation, in the open rather than in a tooltip; stays open across redraws
+      var dt = el('details', 'explain', '<summary>How to read this chart</summary>' + EXPLAIN[k]);
+      dt.open = !!(S.open && S.open[k]);
+      (function (key, d) { d.addEventListener('toggle', function () { S.open = S.open || {}; S.open[key] = d.open; }); })(k, dt);
+      c.appendChild(dt);
+    }
     if (k === 'rpm' && inspectLinks()) c.appendChild(el('p', 'hint', 'Odd-looking RPM? ' + inspectLinks() + ' shows the vibration behind it, lap by lap.'));
     if (k === 'rpm' && (D.shift_rpm || D.max_rpm)) {
       var lab = el('label', 'hint', '<input type="checkbox"' + (S.limits ? ' checked' : '') + '> Show configured shift point and max RPM'); lab.style.cssText = 'display:flex;gap:6px;align-items:center;margin-top:6px';
@@ -568,6 +580,7 @@ function renderPanes() {
     p.appendChild(c);
     charts.push({ key: k, cv: cv }); wireChart(cv);
   });
+  if (sec.charts.indexOf('yaw') >= 0) renderRotation(p);
 }
 function renderLaps(p) {
   var ns = Math.max.apply(null, [0].concat(LAPS.map(function (l) { return (lapSectors(l) || []).length; }))), secIdx = [];
@@ -1172,6 +1185,66 @@ function drawCoachZonesChart(g, z, yOf, def, after) {
       if (v != null) { g.fillStyle = css('--surface'); g.strokeStyle = colour(q.si); g.lineWidth = 2.5; g.beginPath(); g.arc(x, yOf(v), 4.5, 0, 6.3); g.fill(); g.stroke(); }
     });
   });
+}
+
+// ---- rotation by corner: the biggest rotation event in each corner, its size in degrees and the catch ----
+// From the excess-yaw trace on the grid: the largest run above zero (over ROT_MIN deg/s at its peak), added up
+// over time into degrees, then the run below zero straight after it (within 1.5 s) as the catch.
+var ROT_MIN = 2.5, ROT_EDGE = 0.5;
+function rotationEvent(l, a, b) {
+  if (!l.yaw || !l.t) return null;
+  var skip = {}, best = -1, bv = ROT_MIN, i0, i1;
+  for (var tries = 0; tries < 4; tries++) {
+    best = -1; bv = ROT_MIN;
+    for (var i = a; i <= b; i++) { var y = l.yaw[i]; if (!skip[i] && y != null && y > bv) { bv = y; best = i; } }
+    if (best < 0) return { none: true };
+    i0 = best; i1 = best;
+    while (i0 > 0 && l.yaw[i0 - 1] != null && l.yaw[i0 - 1] > ROT_EDGE) i0--;
+    while (i1 < l.yaw.length - 1 && l.yaw[i1 + 1] != null && l.yaw[i1 + 1] > ROT_EDGE) i1++;
+    // an event belongs to the corner where its peak is: one peaking next door is skipped here
+    var pk = i0; for (var q = i0; q <= i1; q++) if (l.yaw[q] != null && l.yaw[q] > l.yaw[pk]) pk = q;
+    if (pk >= a && pk <= b) break;
+    for (q = i0; q <= i1; q++) skip[q] = true;
+    best = -1;
+  }
+  if (best < 0) return { none: true };
+  best = i0; for (var r = i0; r <= i1; r++) if (l.yaw[r] > l.yaw[best]) best = r;
+  bv = l.yaw[best];
+  var deg = 0, k;
+  for (k = i0; k < i1; k++) if (l.t[k] != null && l.t[k + 1] != null) deg += l.yaw[k] * (l.t[k + 1] - l.t[k]);
+  var catchDeg = 0, cpk = 0, j = i1 + 1;
+  while (j < l.yaw.length && l.t[j] != null && l.t[j] - l.t[i1] < 1.5 && !(l.yaw[j] != null && l.yaw[j] < -ROT_EDGE)) j++;
+  for (; j < l.yaw.length - 1 && l.yaw[j] != null && l.yaw[j] < -ROT_EDGE; j++) {
+    if (l.t[j] != null && l.t[j + 1] != null) catchDeg -= l.yaw[j] * (l.t[j + 1] - l.t[j]);
+    cpk = Math.max(cpk, -l.yaw[j]);
+  }
+  return { at: best, peak: bv, deg: deg, catchDeg: catchDeg, catchPeak: cpk };
+}
+function renderRotation(p) {
+  var laps = S.sel.map(function (i) { return LAPS[i]; }).filter(function (l) { return l.yaw; });
+  if (!laps.length) return;
+  var cs = GT().corners.slice().sort(function (a, b) { return a.number - b.number; }), G = coachGroup();
+  var c = el('div', 'card scroll-x rot');
+  var h = '<h3><span>Rotation by corner</span></h3><table><tr><th>Corner</th>' + laps.map(function (l) { return '<th style="color:' + colour(S.sel.indexOf(LAPS.indexOf(l))) + '">' + l.label + '</th>'; }).join('') + '</tr>';
+  cs.forEach(function (cn, ci) {
+    var C = G ? G.corners.filter(function (x) { return x.number === cn.number; })[0] : null;
+    var apex = C && C.reference ? (C.apexes === 2 ? C.reference.apex1_m : C.reference.apex_m) : null;
+    h += '<tr class="click" data-c="' + ci + '"><td>' + cn.name + '</td>' + laps.map(function (l) {
+      // this corner only: from just before its entry gate to just after its exit, never into a neighbour
+      var lo = Math.round((cn.entry_dist_m - 10) / STEP), hi = Math.round((cn.exit_dist_m + 20) / STEP);
+      if (ci > 0) lo = Math.max(lo, Math.round(cs[ci - 1].exit_dist_m / STEP) + 1);
+      if (ci + 1 < cs.length) hi = Math.min(hi, Math.round(cs[ci + 1].entry_dist_m / STEP) - 1);
+      var e = rotationEvent(l, Math.max(0, lo), Math.min(N - 1, hi));
+      if (!e) return '<td></td>';
+      if (e.none) return '<td class="hint">settled</td>';
+      var where = apex == null ? '' : (e.at * STEP < apex - 10 ? 'entry' : 'exit');
+      return '<td>' + e.deg.toFixed(1) + '° out' + (e.catchDeg >= 0.5 ? ', ' + e.catchDeg.toFixed(1) + '° caught' : '') +
+        '<span class="sub">' + (where ? where + ', ' : '') + 'peak ' + e.peak.toFixed(0) + '°/s at ' + Math.round(e.at * STEP) + ' m</span></td>';
+    }).join('') + '</tr>';
+  });
+  c.innerHTML = h + '</table><p class="hint">For each corner, the biggest moment the car rotated faster than its path: how many degrees it moved around ("out"), where, and how fast at its peak; then how many degrees came back straight after it ("caught"). "Settled" means nothing above ' + ROT_MIN + ' degrees per second. A few degrees out on entry, with little to catch, is the car being turned toward the apex; several degrees out on the exit followed by a similar catch is the rear stepping out under power and being gathered up. Tap a row to look at that corner.</p>';
+  p.appendChild(c);
+  c.querySelectorAll('tr.click').forEach(function (r) { r.onclick = function () { pickCorner(+r.dataset.c); }; });
 }
 
 // ---- ghost and car: your best, the ghost and the car benchmark, segment by segment and corner by corner (analysis/lapsim.py) ----
