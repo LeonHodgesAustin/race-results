@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- rt-fingerprint: 7d617c8ffa7269a4 -->
+<!-- rt-fingerprint: eea02826634507d0 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -970,7 +970,7 @@ function renderCoach(p) {
     (C.type && CTYPE[C.type] ? '<p class="hint" style="margin-top:0">' + CTYPE[C.type][1] + (val.length ? ' Across your laps, ' + val.join(', and ') + '.' : '') + '</p>' : '') +
     t + (laps.length ? '<div class="calls">' + calls + '</div>' : '') +
     (hab.length ? '<p style="margin:10px 0 4px"><b>Habits here</b></p><ul class="habits">' + hab.map(function (hh) { return '<li>' + hh.example + ' <span class="hint">' + hh.laps + ' of ' + C.n_laps + ' laps, ' + hh.per_lap_s.toFixed(2) + ' s a lap</span></li>'; }).join('') + '</ul>' : '') +
-    '<p class="hint">"Your best laps" is the median of the ' + C.ref_laps.length + ' laps quickest through this corner; positions are metres from start/finish (marked on the map: B brake, T turn-in, A apex, O track-out), and each lap shows how far before (−) or after (+) them it was. ' +
+    '<p class="hint">"Your best laps" is the median of the ' + C.ref_laps.length + ' laps quickest through this corner; positions are metres from start/finish (labelled on the map; your selected laps\' own points are the rings in their colours), and each lap shows how far before (−) or after (+) them it was. ' +
     'Braking points compare with your best laps in the same session, since grip and traffic change them. The swing across the road is measured from GPS within this one corner, where its drift is small (about 0.2 m), so it can tell a tighter apex from a looser one but not where the whole corner sat on the road.</p>';
   p.appendChild(c2);
   c2.querySelectorAll('#coachc button').forEach(function (b) { b.onclick = function () { pickCoach(+b.dataset.c); }; });
@@ -995,24 +995,56 @@ function drawCoachMarks(g) {
   var G = coachGroup(); if (!G || S.coach == null) return;
   var C = G.corners.filter(function (c) { return c.number === S.coach; })[0]; if (!C) return;
   var ref = refLap(); if (!ref || !ref.lat) return;
-  var R = C.reference, l0 = ref, bref = (C.braking_ref[String(l0.session_idx)] || R);
-  var mk = [['B', bref.brake_on_m], ['T', R.turn_in_m], ['A', R.apex_m], ['O', R.track_out_m]];
-  g.font = '700 10px ' + css('--font-sans'); g.textAlign = 'center'; g.textBaseline = 'middle';
-  mk.forEach(function (m) {
-    if (m[1] == null) return; var j = Math.round(m[1] / STEP); if (ref.lat[j] == null) return;
-    var q = proj(ref.lat[j], ref.lon[j]);
-    g.fillStyle = css('--text'); g.strokeStyle = css('--surface'); g.lineWidth = 2;
-    g.beginPath(); g.arc(q[0], q[1], 8, 0, 6.3); g.fill(); g.stroke();
-    g.fillStyle = css('--surface'); g.fillText(m[0], q[0], q[1] + 0.5);
-  });
+  var R = C.reference, bref = (C.braking_ref[String(ref.session_idx)] || R);
+  // the selected laps' own points first, as small rings in their colours, so the reference labels sit on top
   S.sel.forEach(function (li, si) {
     var l = LAPS[li], x = coachLap(l); if (!x || !l.lat) return;
     var cc = x.corners.filter(function (y) { return y.corner === C.number; })[0]; if (!cc) return;
     var P = cc.points;
     [P.brake_on_m, P.turn_in_m, P.apex_m, P.track_out_m].forEach(function (d) {
       if (d == null) return; var j = Math.round(d / STEP); if (l.lat[j] == null) return;
-      var q = proj(l.lat[j], l.lon[j]); g.strokeStyle = colour(si); g.lineWidth = 2.5; g.beginPath(); g.arc(q[0], q[1], 4, 0, 6.3); g.stroke();
+      var q = proj(l.lat[j], l.lon[j]); g.strokeStyle = colour(si); g.fillStyle = css('--surface'); g.lineWidth = 2.5;
+      g.beginPath(); g.arc(q[0], q[1], 4.5, 0, 6.3); g.fill(); g.stroke();
     });
+  });
+  // the reference points: a marker on the line and a labelled tag off to the side, clear of the laps
+  var mk = [['Brake', bref.brake_on_m], ['Turn-in', R.turn_in_m], ['Apex', R.apex_m], ['Track-out', R.track_out_m]]
+    .filter(function (m) { var j = m[1] == null ? -1 : Math.round(m[1] / STEP); return j >= 0 && ref.lat[j] != null; })
+    .map(function (m) { var j = Math.round(m[1] / STEP); return { t: m[0], j: j, q: proj(ref.lat[j], ref.lon[j]) }; })
+    .filter(function (m) { return m.q[0] >= 0 && m.q[0] <= mapCv.clientWidth && m.q[1] >= 0 && m.q[1] <= mapCv.clientHeight; });
+  if (!mk.length) return;
+  // where the line runs on screen, so a tag isn't put on top of it (this corner, the next and the one before)
+  var lineP = [];
+  for (var jj = Math.max(0, mk[0].j - 250); jj < Math.min(N, mk[mk.length - 1].j + 250); jj += 2) if (ref.lat[jj] != null) lineP.push(proj(ref.lat[jj], ref.lon[jj]));
+  var cx0 = mk.reduce(function (s, m) { return s + m.q[0]; }, 0) / mk.length, cy0 = mk.reduce(function (s, m) { return s + m.q[1]; }, 0) / mk.length;
+  var w = mapCv.clientWidth, h = mapCv.clientHeight, boxes = labelBoxes.slice();
+  g.font = '600 12px ' + css('--font-sans'); g.textAlign = 'center'; g.textBaseline = 'middle';
+  mk.forEach(function (m) {
+    // the track's direction here, and the side of it facing away from the corner's other points
+    var a = ref.lat[m.j - 3] != null ? proj(ref.lat[m.j - 3], ref.lon[m.j - 3]) : m.q, b = ref.lat[m.j + 3] != null ? proj(ref.lat[m.j + 3], ref.lon[m.j + 3]) : m.q;
+    var tx = b[0] - a[0], ty = b[1] - a[1], tl = Math.sqrt(tx * tx + ty * ty) || 1, nx = -ty / tl, ny = tx / tl;
+    if (nx * (m.q[0] - cx0) + ny * (m.q[1] - cy0) < 0) { nx = -nx; ny = -ny; }
+    var tw = g.measureText(m.t).width + 14, th = 20, lx, ly;
+    var reach = 18 + Math.abs(nx) * tw / 2 + Math.abs(ny) * th / 2;   // the tag's near edge stays 18 px off the dot
+    var tries = [], best = null, bestBad = Infinity;
+    for (var k = 0; k < 4; k++) { tries.push([reach + k * 18, 1]); tries.push([reach + k * 18, -1]); }   // further out, either side
+    tries.forEach(function (tr) {
+      var x = m.q[0] + nx * tr[0] * tr[1], y = m.q[1] + ny * tr[0] * tr[1];
+      x = Math.max(tw / 2 + 2, Math.min(w - tw / 2 - 2, x)); y = Math.max(th / 2 + 2, Math.min(h - th / 2 - 2, y));
+      var bad = 0;
+      boxes.forEach(function (o) { if (x - tw / 2 < o.x + o.w + 3 && x + tw / 2 > o.x - 3 && y - th / 2 < o.y + o.h + 3 && y + th / 2 > o.y - 3) bad += 100; });
+      lineP.forEach(function (lp) { if (lp[0] > x - tw / 2 - 4 && lp[0] < x + tw / 2 + 4 && lp[1] > y - th / 2 - 4 && lp[1] < y + th / 2 + 4) bad += 1; });
+      bad += tr[0] / 200;   // nearer is better when both are clear
+      if (bad < bestBad) { bestBad = bad; best = [x, y]; }
+    });
+    lx = best[0]; ly = best[1];
+    boxes.push({ x: lx - tw / 2, y: ly - th / 2, w: tw, h: th });
+    g.strokeStyle = css('--text'); g.lineWidth = 1.5; g.beginPath(); g.moveTo(m.q[0], m.q[1]); g.lineTo(lx, ly); g.stroke();
+    g.fillStyle = css('--text'); g.strokeStyle = css('--surface'); g.lineWidth = 2;
+    g.beginPath(); g.arc(m.q[0], m.q[1], 5, 0, 6.3); g.fill(); g.stroke();
+    g.fillStyle = css('--surface'); g.strokeStyle = css('--text'); g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(lx - tw / 2 + 5, ly - th / 2); g.arcTo(lx + tw / 2, ly - th / 2, lx + tw / 2, ly + th / 2, 5); g.arcTo(lx + tw / 2, ly + th / 2, lx - tw / 2, ly + th / 2, 5); g.arcTo(lx - tw / 2, ly + th / 2, lx - tw / 2, ly - th / 2, 5); g.arcTo(lx - tw / 2, ly - th / 2, lx + tw / 2, ly - th / 2, 5); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = css('--text'); g.fillText(m.t, lx, ly + 0.5);
   });
 }
 
