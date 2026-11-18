@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- rt-fingerprint: 3b8f42d0b20d74f5 -->
+<!-- rt-fingerprint: 9ebeafbc0ba1bd9e -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1491,6 +1491,20 @@ function drawLegend(g, z) {
   g.fillStyle = gr; g.fillRect(x, y, w, 7); g.fillStyle = css('--text-2'); g.font = '10px ' + css('--font-sans'); g.textBaseline = 'top'; g.textAlign = 'left';
   g.fillText(S.colour === 'speed' ? '0' : '0 g', x, y + 10); g.textAlign = 'right'; g.fillText(S.colour === 'speed' ? Math.round(hi * 0.621371) + ' mph' : hi + ' g', x + w, y + 10);
 }
+function niceLen(v) { var e = Math.pow(10, Math.floor(Math.log(v) / Math.LN10)), f = v / e; return (f >= 5 ? 5 : f >= 2 ? 2 : 1) * e; }
+function drawScale(g, z, mpp) {   // scale key, bottom right: metres above, feet below (mpp = metres per CSS pixel)
+  if (!(mpp > 0) || !isFinite(mpp)) return;
+  var maxW = Math.min(120, z.w * 0.3), m = niceLen(maxW * mpp), ft = niceLen(maxW * mpp / 0.3048);
+  var wm = m / mpp, wf = ft * 0.3048 / mpp, w = Math.max(wm, wf), x1 = z.w - 12, x0 = x1 - w, y = z.h - 22;
+  g.save(); g.font = '10px ' + css('--font-sans'); g.textAlign = 'left'; g.lineWidth = 1;
+  g.globalAlpha = 0.82; g.fillStyle = css('--surface'); g.fillRect(x0 - 6, y - 18, w + 12, 34); g.globalAlpha = 1;
+  g.strokeStyle = css('--text-2'); g.fillStyle = css('--text-2');
+  g.beginPath(); g.moveTo(x0, y - 4); g.lineTo(x0, y); g.lineTo(x0 + wm, y); g.lineTo(x0 + wm, y - 4);   // metres, ticks up
+  g.moveTo(x0, y + 4); g.lineTo(x0, y); g.moveTo(x0 + wf, y); g.lineTo(x0 + wf, y + 4); g.lineTo(x0, y + 4); g.stroke();   // feet, ticks down
+  g.textBaseline = 'bottom'; g.fillText((m >= 1000 ? m / 1000 + ' km' : m + ' m'), x0, y - 5);
+  g.textBaseline = 'top'; g.fillText((ft >= 5280 ? ft / 5280 + ' mi' : ft + ' ft'), x0, y + 5);
+  g.restore();
+}
 function topLap() { return S.top != null && S.sel.indexOf(S.top) >= 0 ? S.top : null; }
 function mapOk(z, ref) {   // keep at least two sample points of the lap on screen, so the map cannot be lost
   var n = 0, i, p;
@@ -1564,6 +1578,7 @@ function drawMap() {
     if (S.pts && !full) { g.strokeStyle = css('--text'); g.lineWidth = 1; for (var j = S.win[0]; j <= S.win[1]; j += S.mv.k >= 3 ? 1 : 5) { if (l.lat[j] == null) continue; var q = proj(l.lat[j], l.lon[j]); g.beginPath(); g.arc(q[0], q[1], 2.2, 0, 6.3); g.stroke(); } }
   });
   if (S.colour !== 'lap') drawLegend(g, z);
+  drawScale(g, z, 111320 / (sc * S.mv.k));
   if (S.sec === 'data') drawGates(g, z);
   g.font = '600 11px ' + css('--font-sans'); g.textAlign = 'center'; g.textBaseline = 'middle';
   labelBoxes = [];
