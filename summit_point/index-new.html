@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- rt-fingerprint: efdbd3448431b56d -->
+<!-- rt-fingerprint: 17fa3b51558f0e6b -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -198,6 +198,13 @@ th:first-child, td:first-child { text-align: left; }
 th { color: var(--text-2); font-weight: 600; font-size: 12px; }
 td.num, th.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 tr.click { cursor: pointer; }
+th.sortable { padding: 0; }
+th.sortable button { all: unset; box-sizing: border-box; display: block; width: 100%; padding: 6px 8px; cursor: pointer; color: var(--text-2); font-weight: 600; font-size: 12px; white-space: nowrap; }
+th.num.sortable button { text-align: right; }
+th.sortable.on button { color: var(--text); }
+th.sortable button:hover { background: var(--subtle); }
+th.sortable button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+#ldrv { font: inherit; font-size: 13px; padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--r-control); background: var(--surface); color: var(--text); }
 tr.click:hover { background: var(--subtle); }
 tr.on { background: var(--accent-soft); }
 .p { color: var(--purple); font-weight: 700; }
@@ -582,14 +589,58 @@ function renderPanes() {
   });
   if (sec.charts.indexOf('yaw') >= 0) renderRotation(p);
 }
+// Laps table: sort by any column (click a header; again reverses it) and filter which laps it lists.
+// Kept in S for the visit, so switching sections and back keeps them.
+var LSORTS = { lap: 'Lap', time: 'Time', vs: 'vs best', g: 'Peak cornering G' };
+function lapDriver(l) { var s = D.sessions[l.session_idx]; return (s && s.driver) || ''; }
+function lapSortVal(l, i, k) {
+  if (k === 'lap') return i;
+  if (k === 'time' || k === 'vs') return l.time_s;
+  if (k === 'g') return l.g && l.g.peak_lat_g != null ? l.g.peak_lat_g : null;
+  var m = /^s(\d+)$/.exec(k); if (m) { var sc = lapSectors(l); return sc && sc[+m[1]] != null ? sc[+m[1]] : null; }
+  return null;
+}
+function lapFilterOk(i) {
+  var l = LAPS[i], f = S.lfilt || 'all';
+  if (f === 'race' && (l.ghost || isOut(i) || !hasTrace(l))) return false;
+  if (f === 'sel' && S.sel.indexOf(i) < 0) return false;
+  if (S.ldrv != null && lapDriver(l) !== S.ldrv) return false;
+  return true;
+}
 function renderLaps(p) {
   var ns = Math.max.apply(null, [0].concat(LAPS.map(function (l) { return (lapSectors(l) || []).length; }))), secIdx = [];
   for (var q = 0; q < ns; q++) secIdx.push(q);
   var bestSec = secIdx.map(function (k) { var vs = real.map(function (i) { var s = lapSectors(LAPS[i]); return s ? s[k] : null; }).filter(function (v) { return v != null; }); return vs.length ? Math.min.apply(null, vs) : null; });
+  var srt = S.lsort || { k: 'lap', d: 1 };
+  if (!/^(lap|time|vs|g|s\d+)$/.test(srt.k) || (/^s\d+$/.test(srt.k) && +srt.k.slice(1) >= ns)) srt = S.lsort = { k: 'lap', d: 1 };
+  // filter bar
+  var shown = LAPS.map(function (l, i) { return i; }).filter(function (i) { return isShown(i); });
+  var drivers = []; shown.forEach(function (i) { var d = lapDriver(LAPS[i]); if (drivers.indexOf(d) < 0) drivers.push(d); });
+  if (drivers.length < 2) S.ldrv = null;
+  var rows = shown.filter(lapFilterOk);
+  rows.sort(function (x, y) {
+    var a = lapSortVal(LAPS[x], x, srt.k), b = lapSortVal(LAPS[y], y, srt.k);
+    if (a == null && b == null) return x - y; if (a == null) return 1; if (b == null) return -1;   // no value: always last
+    return (a - b) * srt.d || x - y;
+  });
+  var tb = el('div', 'toolbar');
+  tb.innerHTML = '<span class="hint">Show</span><span class="seg" id="lfilt">' +
+    [['all', 'All laps', 'Every lap in the sessions shown'], ['race', 'Race laps', 'Hide slow, excluded and simulated laps, and laps with no GPS trace'], ['sel', 'Selected', 'Only the laps you have picked']].map(function (o) {
+      return '<button data-f="' + o[0] + '" title="' + o[2] + '" aria-pressed="' + ((S.lfilt || 'all') === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</span>' +
+    (drivers.length > 1 ? '<select id="ldrv" title="Only one driver\'s laps"><option value="">All drivers</option>' + drivers.map(function (d) {
+      return '<option value="' + d.replace(/"/g, '&quot;') + '"' + (S.ldrv === d ? ' selected' : '') + '>' + (d ? d.replace(/</g, '&lt;') : 'No driver set') + '</option>'; }).join('') + '</select>' : '') +
+    '<span class="hint">' + rows.length + ' of ' + shown.length + ' laps</span>';
+  p.appendChild(tb);
+  tb.querySelectorAll('#lfilt button').forEach(function (b) { b.onclick = function () { S.lfilt = b.dataset.f; renderPanes(); }; });
+  var ds = tb.querySelector('#ldrv'); if (ds) ds.onchange = function () { S.ldrv = ds.value === '' ? null : ds.value; renderPanes(); };
   var c = el('div', 'card scroll-x');
-  var h = '<table><tr><th>Lap</th><th class="num">Time</th><th class="num">vs best</th>' + secIdx.map(function (k) { return '<th class="num">S' + (k + 1) + '</th>'; }).join('') + '<th class="num">Peak cornering G</th><th>Note</th></tr>';
-  LAPS.forEach(function (l, i) {
-    if (!isShown(i)) return;
+  var th = function (k, label, cls) {
+    var on = srt.k === k, arrow = on ? (srt.d > 0 ? ' ▲' : ' ▼') : '';
+    return '<th class="sortable' + (cls ? ' ' + cls : '') + (on ? ' on' : '') + '" data-k="' + k + '" aria-sort="' + (on ? (srt.d > 0 ? 'ascending' : 'descending') : 'none') + '"><button type="button" title="Sort by ' + label + (on ? ' (click to reverse)' : '') + '">' + label + arrow + '</button></th>';
+  };
+  var h = '<table><tr>' + th('lap', 'Lap') + th('time', 'Time', 'num') + th('vs', 'vs best', 'num') + secIdx.map(function (k) { return th('s' + k, 'S' + (k + 1), 'num'); }).join('') + th('g', 'Peak cornering G', 'num') + '<th>Note</th></tr>';
+  rows.forEach(function (i) {
+    var l = LAPS[i];
     var sel = S.sel.indexOf(i) >= 0, gr = !hasTrace(l);
     h += '<tr class="click' + (sel ? ' on' : '') + '" data-i="' + i + '" style="' + (gr ? 'opacity:.55' : '') + '"><td>' + l.label + '</td>' +
       '<td class="num ' + (!l.ghost && l.time_s === bestTime ? 'p' : '') + '">' + fmt(l.time_s) + '</td>' +
@@ -598,9 +649,14 @@ function renderLaps(p) {
     var note = (l.ghost ? ['simulated'] : []).concat((l.flags || []).map(function (f) { return f === 'excluded' ? 'excluded' : 'slow lap'; })).concat(hasTrace(l) ? [] : ['no trace']).join(', ');
     h += '<td class="num">' + (l.g && l.g.peak_lat_g != null ? l.g.peak_lat_g.toFixed(2) : '') + '</td><td class="' + (isOut(i) ? 'flagnote' : 'hint') + '" title="' + (flagText(l) + (hasTrace(l) ? '' : ' ' + NOTRACE)).replace(/"/g, '&quot;') + '">' + note + '</td></tr>';
   });
+  if (!rows.length) h += '<tr><td colspan="' + (5 + ns) + '" class="hint">No laps match. Choose "All laps" to see them again.</td></tr>';
   c.innerHTML = h + '</table>';
   c.querySelectorAll('tr.click').forEach(function (r) { r.onclick = function () { toggleLap(+r.dataset.i); }; });
-  p.appendChild(el('p', 'hint', 'Tap laps here or in the tray to choose what the other sections show. Purple is best of any lap.'));
+  c.querySelectorAll('th.sortable').forEach(function (t) { t.onclick = function () {
+    var k = t.dataset.k, cur = S.lsort || { k: 'lap', d: 1 };
+    S.lsort = cur.k === k ? { k: k, d: -cur.d } : { k: k, d: k === 'g' ? -1 : 1 };   // more G first; everything else smallest first
+    renderPanes(); }; });
+  p.appendChild(el('p', 'hint', 'Tap laps here or in the tray to choose what the other sections show. Tap a column heading to sort by it. Purple is best of any lap.'));
   if (LAPS.some(function (l, i) { return isShown(i) && isOut(i); })) p.appendChild(el('p', 'hint', 'Laps marked slow (over 107% of their session\'s best) or excluded are probably not race laps: an out-lap, a spin, a caution. They stay here to look at, and never count as a best.'));
   if (custom && LAPS.some(function (l) { return l.file && !l.loaded; })) p.appendChild(el('p', 'hint', 'Your edited gates are applied to the laps you have opened. Other laps still show the configured gates\' times until you select them.'));
   p.appendChild(c);
