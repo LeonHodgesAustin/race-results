@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- rt-fingerprint: da9ae95c3bb41a4d -->
+<!-- rt-fingerprint: efdbd3448431b56d -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1715,7 +1715,15 @@ function redraw() { if (raf) return; raf = requestAnimationFrame(function () { r
 // sections that have a readout, so Data & setup's Diagnostics links used to open on the defaults),
 // and once more as one is followed, so it always carries the lap, range and cursor of this moment.
 document.addEventListener('click', function (e) { var a = e.target && e.target.closest && e.target.closest('a.inspl, #insplink'); if (a) syncInspect(); }, true);
-function renderAll() { renderNav(); renderTray(); renderPanes(); redraw(); }
+// Every selected lap's trace must be loaded before the map and charts can draw it. A session switch
+// (the tray's session menu, or a session row on Data & setup) swaps in default laps that may never have
+// been fetched, and writeHash's replaceState fires no hashchange to load them, so the map stayed blank
+// until something else loaded them (Leon, 2026-11-19: "sometimes the map will not render"). Load them
+// here, then draw again; loadSel drops a lap that can't load, so this can't loop.
+function renderAll() {
+  renderNav(); renderTray(); renderPanes(); redraw();
+  if (S.sel.some(function (i) { return !LAPS[i].loaded; })) loadSel().then(renderAll);
+}
 window.addEventListener('resize', redraw);
 document.addEventListener('rt-themechange', function () { renderTray(); redraw(); });
 window.addEventListener('hashchange', function () { readHash(); loadSel().then(function () { applyT(); renderAll(); }); });
